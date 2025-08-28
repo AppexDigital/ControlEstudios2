@@ -152,7 +152,6 @@
     </style>
 </head>
 <body>
-
     <!-- 1. Pantalla de Login -->
     <div id="login-screen" class="flex items-center justify-center h-full login-background p-4">
         <div class="w-full max-w-md p-10 space-y-8 bg-white rounded-2xl login-card">
@@ -372,9 +371,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const appState = { currentUser: null, data: {}, isEditing: false, isViewing: false };
+            const appState = { currentUser: null, data: {}, isEditing: false, isViewing: false, listenersAttached: false };
 
-            const loaderOverlay = document.getElementById('loader-overlay');
             const loginScreen = document.getElementById('login-screen');
             const appScreen = document.getElementById('app-screen');
             const loginForm = document.getElementById('login-form');
@@ -420,7 +418,6 @@
                 totalCrc: document.getElementById('resumen-total-crc')
             };
 
-            const showLoader = (show) => { loaderOverlay.style.display = show ? 'flex' : 'none'; };
             const parsePercent = (str) => parseFloat(String(str).replace('%', '')) / 100 || 0;
             const parseCurrency = (str) => parseFloat(String(str).replace(/[$,₡]/g, '').replace(',', '.')) || 0;
             const formatNumberForSheet = (num) => String(num.toFixed(2)).replace('.', ',');
@@ -470,7 +467,10 @@
                         document.querySelector('button[type="submit"]').disabled = true;
                     }
                 }
-                setupAppEventListeners();
+                if (!appState.listenersAttached) {
+                    setupAppEventListeners();
+                    appState.listenersAttached = true;
+                }
                 resetForm();
                 showView('registrar');
             }
