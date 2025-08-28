@@ -55,6 +55,12 @@
             transform: translateY(-3px);
             box-shadow: 0 8px 25px -8px rgba(13, 148, 136, 0.8);
         }
+        .btn-primary:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
         .btn-secondary {
             background-color: #e2e8f0;
             color: #475569;
@@ -144,9 +150,29 @@
         .total-amount {
             font-size: clamp(1.5rem, 5vw, 2.25rem); /* Se ajusta entre 24px y 36px */
         }
+        #loader-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 9999; transition: opacity 0.3s;
+        }
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--color-primary);
+            border-radius: 50%;
+            width: 50px; height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
+
+    <!-- Overlay de Carga -->
+    <div id="loader-overlay" class="hidden">
+        <div class="loader"></div>
+        <p class="mt-4 text-lg font-semibold text-slate-700">Procesando...</p>
+    </div>
 
     <!-- 1. Pantalla de Login -->
     <div id="login-screen" class="flex items-center justify-center h-full login-background p-4">
@@ -390,6 +416,7 @@
             // =================================================================================
             // DOM ELEMENT SELECTORS
             // =================================================================================
+            const loaderOverlay = document.getElementById('loader-overlay');
             const loginScreen = document.getElementById('login-screen');
             const appScreen = document.getElementById('app-screen');
             const loginForm = document.getElementById('login-form');
@@ -438,8 +465,13 @@
             // =================================================================================
             // UTILITY & HELPER FUNCTIONS
             // =================================================================================
+            const showLoader = (show) => { loaderOverlay.style.display = show ? 'flex' : 'none'; };
             const parsePercent = (str) => parseFloat(String(str).replace('%', '')) / 100 || 0;
             const parseCurrency = (str) => parseFloat(String(str).replace(/[$,₡]/g, '').replace(',', '.')) || 0;
+            
+            // --- NEW FORMATTING FUNCTIONS FOR GOOGLE SHEETS ---
+            const formatNumberForSheet = (num) => String(num.toFixed(2)).replace('.', ',');
+
             const formatUSD = (num) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
             const formatCRC = (num) => new Intl.NumberFormat('es-CR', { style: 'currency', currency: 'CRC' }).format(num);
 
@@ -512,7 +544,6 @@
                     const password = loginForm.password.value;
                     const dataLoaded = await fetchData();
 
-                    // Hardcoded admin user
                     if (username === 'admin' && password === 'admin') {
                         appState.currentUser = { Usuario: 'Admin', Rol: 'Admin' };
                         initializeApp();
@@ -697,7 +728,7 @@
                 const feePercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.Fees) : 0;
                 const iva_O = montoTotalDescontado_M * ivaPercent;
                 const montoTotalConIVA_Q = montoTotalDescontado_M + iva_O;
-                const fee_P = montoTotalConIVA_Q * feePercent; // Fee is often calculated on the total with tax
+                const fee_P = montoTotalConIVA_Q * feePercent;
 
                 const totalACobrar = montoTotalConIVA_Q + fee_P;
 
@@ -708,13 +739,14 @@
 
             function setFormState(disabled) {
                 Object.values(formFields).forEach(field => {
-                    if (field.tagName === 'DIV') { // For the button group container
+                    if (field.tagName === 'DIV') {
                         field.querySelectorAll('button').forEach(btn => btn.disabled = disabled);
                     } else {
                         field.disabled = disabled;
                     }
                 });
                 citaForm.querySelector('button[type="submit"]').style.display = disabled ? 'none' : 'flex';
+                clearFormBtn.style.display = disabled ? 'flex' : 'flex'; // Always show clear
             }
 
             function resetForm() {
@@ -728,7 +760,7 @@
 
                 formFields.registra.textContent = appState.currentUser.Usuario;
                 citaForm.querySelector('button[type="submit"]').textContent = 'Guardar';
-                setFormState(false); // Enable form for new entry
+                setFormState(false);
                 handleEspecialidadChange();
             }
 
@@ -740,7 +772,6 @@
                 formFields.nombre.value = cita.Nombre;
                 formFields.identificacion.value = cita.Identificación;
 
-                // Date formatting: from DD/MM/YYYY to YYYY-MM-DD
                 const dateParts = cita['Fecha de Estudio'].split('/');
                 const isoDate = `${dateParts[2]}-${dateParts[1].padStart(2, '0')}-${dateParts[0].padStart(2, '0')}`;
                 formFields.fechaEstudio.value = isoDate;
@@ -766,7 +797,7 @@
                 appState.isViewing = true;
                 appState.isEditing = false;
                 loadCitaIntoForm(citaId);
-                setFormState(true); // Disable all fields
+                setFormState(true);
                 showView('registrar');
             }
 
@@ -774,7 +805,7 @@
                 appState.isEditing = true;
                 appState.isViewing = false;
                 loadCitaIntoForm(citaId);
-                setFormState(false); // Ensure form is enabled
+                setFormState(false);
                 citaForm.querySelector('button[type="submit"]').textContent = 'Actualizar';
                 showView('registrar');
             }
@@ -785,6 +816,7 @@
                 const cita = appState.data.citas.find(c => c.ID === citaId);
                 if (!cita) return;
 
+                showLoader(true);
                 try {
                     const response = await fetchWithTimeout('/.netlify/functions/delete-cita', {
                         method: 'DELETE',
@@ -799,19 +831,22 @@
                 } catch (error) {
                     console.error('Delete Error:', error);
                     alert('No se pudo eliminar el registro.');
+                } finally {
+                    showLoader(false);
                 }
             }
             
             async function handleFormSubmit(event) {
                 event.preventDefault();
-                if (appState.isViewing) return; // Prevent saving in view-only mode
+                if (appState.isViewing) return;
                 
+                showLoader(true);
+
                 const selectedService = appState.data.servicios.find(s => s['Producto o Servicio'] === formFields.tipoEstudio.value);
                 const selectedMetodoPago = appState.data.metodosDePago.find(mp => mp.Tipo === formFields.metodoPago.value);
                 const selectedMedicoReporta = appState.data.medicos.find(m => m.Medico === formFields.medicoReporta.value);
                 const activeEspecialidad = formFields.especialidadContainer.querySelector('.active').dataset.studyType;
 
-                // Re-calculate all values to ensure data integrity
                 const montoTotal_J = selectedService ? parseCurrency(selectedService.Precio) : 0;
                 const descuento_K = parseFloat(formFields.descuento.value) || 0;
                 const tipoCambio_R = parseFloat(formFields.tipoCambio.value) || 520;
@@ -845,7 +880,7 @@
                 const formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
 
                 const citaData = {
-                    ID: formFields.id.value || `ID-${Date.now()}`,
+                    ID: formFields.id.value || Math.floor(100000 + Math.random() * 900000).toString(),
                     Enviado: formFields.enviado.checked ? 'Si' : 'No',
                     'Fecha de Estudio': formattedDate,
                     Nombre: formFields.nombre.value,
@@ -854,23 +889,23 @@
                     'Tipo de Estudio': formFields.tipoEstudio.value,
                     'Medico que Refiere': formFields.medicoRefiere.value,
                     'Medico que Reporta': formFields.medicoReporta.value,
-                    'Monto Total': formatUSD(montoTotal_J),
+                    'Monto Total': formatNumberForSheet(montoTotal_J),
                     Descuento: `${descuento_K * 100}%`,
                     'Descuento aplicado por': appState.currentUser.Usuario,
-                    'Monto Total Descontado': formatUSD(montoTotalDescontado_M),
+                    'Monto Total Descontado': formatNumberForSheet(montoTotalDescontado_M),
                     'Método pago': formFields.metodoPago.value,
-                    IVA: formatUSD(iva_O),
-                    Fee: formatUSD(fee_P),
-                    'Monto total Descontado con IVA': formatUSD(cobrarUSD_T),
+                    IVA: formatNumberForSheet(iva_O),
+                    Fee: formatNumberForSheet(fee_P),
+                    'Monto total Descontado con IVA': formatNumberForSheet(cobrarUSD_T),
                     'Tipo de cambio': tipoCambio_R,
-                    'Cobrar ₡': formatCRC(cobrarCRC_S),
-                    'Cobrar $': formatUSD(cobrarUSD_T),
+                    'Cobrar ₡': formatNumberForSheet(cobrarCRC_S),
+                    'Cobrar $': formatNumberForSheet(cobrarUSD_T),
                     'Porcentaje de comisión': `${porcentajeComision_U * 100}%`,
-                    'Comisión en Colones': formatCRC(comisionColones_V),
-                    'Comisión en Dólares': formatUSD(comisionDolares_W),
-                    'Debito Fiscal': formatUSD(debitoFiscal_X),
-                    'Crédito Fiscal': formatUSD(creditoFiscal_Y),
-                    'IVA Pagado a Hacienda': formatUSD(ivaPagadoHacienda_Z > 0 ? ivaPagadoHacienda_Z : 0),
+                    'Comisión en Colones': formatNumberForSheet(comisionColones_V),
+                    'Comisión en Dólares': formatNumberForSheet(comisionDolares_W),
+                    'Debito Fiscal': formatNumberForSheet(debitoFiscal_X),
+                    'Crédito Fiscal': formatNumberForSheet(creditoFiscal_Y),
+                    'IVA Pagado a Hacienda': formatNumberForSheet(ivaPagadoHacienda_Z > 0 ? ivaPagadoHacienda_Z : 0),
                 };
                 
                 const endpoint = appState.isEditing ? '/.netlify/functions/update-cita' : '/.netlify/functions/add-cita';
@@ -889,6 +924,8 @@
                 } catch (error) {
                     console.error("Submit Error:", error);
                     alert('No se pudo guardar el registro.');
+                } finally {
+                    showLoader(false);
                 }
             }
 
