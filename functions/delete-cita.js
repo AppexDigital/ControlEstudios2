@@ -37,7 +37,8 @@ exports.handler = async function(event, context) {
         }
 
         const rows = await sheet.getRows();
-        const rowToDelete = rows.find(row => row.ID === ID);
+        // CORRECCIÓN: Se usa row.get('ID') para encontrar la fila correctamente.
+        const rowToDelete = rows.find(row => row.get('ID') === ID);
 
         if (rowToDelete) {
             await rowToDelete.delete();
@@ -47,6 +48,6 @@ exports.handler = async function(event, context) {
         }
     } catch (error) {
         console.error('Error al eliminar registro:', error);
-        return { statusCode: 500, body: JSON.stringify({ error: 'Error al eliminar registro.' }) };
+        return { statusCode: 500, body: JSON.stringify({ error: 'Error interno del servidor.' }) };
     }
 };
