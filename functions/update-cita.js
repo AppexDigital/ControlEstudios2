@@ -37,16 +37,17 @@ exports.handler = async function(event, context) {
                 return { statusCode: 400, body: JSON.stringify({ error: 'Tipo de estudio no válido.' }) };
         }
 
-        // Remove tipoEstudio as it's only for routing
-        delete updatedCita.tipoEstudio;
-
         const rows = await sheet.getRows();
-        const rowToUpdate = rows.find(row => row.ID === updatedCita.ID);
+        // CORRECCIÓN: Se usa row.get('ID') para encontrar la fila correctamente.
+        const rowToUpdate = rows.find(row => row.get('ID') === updatedCita.ID);
 
         if (rowToUpdate) {
-            // Update only the fields that are present in updatedCita
+            // CORRECCIÓN: Se usa row.set(key, value) para actualizar cada celda.
             Object.keys(updatedCita).forEach(key => {
-                rowToUpdate[key] = updatedCita[key];
+                // Se asegura de que la clave exista como cabecera en la hoja.
+                if (sheet.headerValues.includes(key)) {
+                    rowToUpdate.set(key, updatedCita[key]);
+                }
             });
             await rowToUpdate.save();
             return { statusCode: 200, body: JSON.stringify({ message: 'Cita actualizada con éxito!' }) };
@@ -55,6 +56,6 @@ exports.handler = async function(event, context) {
         }
     } catch (error) {
         console.error('Error al actualizar la cita:', error);
-        return { statusCode: 500, body: JSON.stringify({ error: 'Error al actualizar la cita.' }) };
+        return { statusCode: 500, body: JSON.stringify({ error: 'Error interno del servidor.' }) };
     }
 };
