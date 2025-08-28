@@ -55,6 +55,15 @@
             transform: translateY(-3px);
             box-shadow: 0 8px 25px -8px rgba(13, 148, 136, 0.8);
         }
+        .btn-secondary {
+            background-color: #e2e8f0;
+            color: #475569;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-secondary:hover {
+            background-color: #cbd5e1;
+        }
         .nav-btn {
             transition: all 0.3s ease;
             border-bottom: 4px solid transparent;
@@ -85,6 +94,11 @@
             background-color: var(--color-card);
             border-color: var(--color-secondary);
             box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.1);
+        }
+        .input-field:disabled {
+            background-color: #e2e8f0;
+            cursor: not-allowed;
+            color: #64748b;
         }
         .readonly-field {
             background-color: #e2e8f0; /* Slate-200 */
@@ -125,6 +139,10 @@
             font-size: 0.875rem; /* text-sm */
             margin-bottom: 0.5rem;
             display: block;
+        }
+        /* Ajuste para el tamaño de la fuente de los totales */
+        .total-amount {
+            font-size: clamp(1.5rem, 5vw, 2.25rem); /* Se ajusta entre 24px y 36px */
         }
     </style>
 </head>
@@ -192,7 +210,6 @@
             <div id="registrar-view" class="min-h-full">
                 <form id="cita-form" class="bg-color-card p-6 sm:p-8 rounded-2xl shadow-xl border border-color-border w-full max-w-full pb-24 md:pb-8">
                     <input type="hidden" id="cita-id">
-                    <input type="hidden" id="row-index">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-x-8 gap-y-6">
                         
                         <!-- Columna 1: Paciente y Servicio -->
@@ -247,8 +264,8 @@
                             </div>
                             <div class="bg-slate-50 p-3 rounded-lg border border-color-border space-y-2 text-sm mt-auto">
                                 <div class="flex justify-between items-center">
-                                    <label class="font-semibold text-color-text-secondary">Fecha:</label>
-                                    <span id="fecha-field" class="font-bold text-color-text-primary text-base"></span>
+                                    <label class="label" for="fecha-estudio">Fecha Estudio:</label>
+                                    <input type="date" id="fecha-estudio" class="input-field text-base text-right w-48">
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <label class="font-semibold text-color-text-secondary">Registra:</label>
@@ -274,11 +291,11 @@
                                 <div class="grid grid-cols-2 gap-4 text-center pt-2">
                                     <div>
                                         <label class="text-sm font-semibold text-color-text-secondary">Total USD</label>
-                                        <p id="resumen-total-usd" class="text-4xl font-bold" style="color:var(--color-primary)">$0.00</p>
+                                        <p id="resumen-total-usd" class="total-amount font-bold" style="color:var(--color-primary)">$0.00</p>
                                     </div>
                                     <div>
                                         <label class="text-sm font-semibold text-color-text-secondary">Total CRC</label>
-                                        <p id="resumen-total-crc" class="text-4xl font-bold" style="color:var(--color-secondary)">₡0.00</p>
+                                        <p id="resumen-total-crc" class="total-amount font-bold" style="color:var(--color-secondary)">₡0.00</p>
                                     </div>
                                 </div>
                             </div>
@@ -293,10 +310,16 @@
                                 Marcar como "Imágenes Enviadas"
                             </label>
                         </div>
-                        <button type="submit" class="btn-primary w-full sm:w-auto py-3 px-8 rounded-lg text-lg flex items-center justify-center gap-2">
-                            <span class="material-symbols-outlined">save</span>
-                            Guardar Registro
-                        </button>
+                        <div class="flex gap-4 w-full sm:w-auto">
+                            <button type="button" id="clear-form-btn" class="btn-secondary w-full sm:w-auto py-3 px-8 rounded-lg text-lg flex items-center justify-center gap-2">
+                                <span class="material-symbols-outlined">cleaning_services</span>
+                                Limpiar
+                            </button>
+                            <button type="submit" class="btn-primary w-full sm:w-auto py-3 px-8 rounded-lg text-lg flex items-center justify-center gap-2">
+                                <span class="material-symbols-outlined">save</span>
+                                Guardar
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -361,6 +384,7 @@
                     citas: []
                 },
                 isEditing: false,
+                isViewing: false,
             };
 
             // =================================================================================
@@ -376,8 +400,8 @@
             const citaForm = document.getElementById('cita-form');
             const citasTableBody = document.getElementById('citas-table-body');
             const searchInput = document.getElementById('search-input');
+            const clearFormBtn = document.getElementById('clear-form-btn');
             
-            // Navigation
             const nav = {
                 registrar: document.getElementById('nav-registrar'),
                 consultar: document.getElementById('nav-consultar'),
@@ -389,10 +413,8 @@
                 consultar: document.getElementById('consultar-view'),
             };
 
-            // Form fields (Mapped to new structure)
             const formFields = {
                 id: document.getElementById('cita-id'),
-                rowIndex: document.getElementById('row-index'),
                 nombre: document.getElementById('nombre'),
                 identificacion: document.getElementById('identificacion'),
                 especialidadContainer: document.getElementById('especialidad'),
@@ -403,11 +425,10 @@
                 metodoPago: document.getElementById('metodo-pago'),
                 tipoCambio: document.getElementById('tipo-cambio'),
                 enviado: document.getElementById('enviado'),
-                fecha: document.getElementById('fecha-field'),
+                fechaEstudio: document.getElementById('fecha-estudio'),
                 registra: document.getElementById('registro-field'),
             };
 
-            // Resumen fields (Mapped to new structure)
             const resumenFields = {
                 base: document.getElementById('resumen-base'),
                 totalUsd: document.getElementById('resumen-total-usd'),
@@ -418,7 +439,7 @@
             // UTILITY & HELPER FUNCTIONS
             // =================================================================================
             const parsePercent = (str) => parseFloat(String(str).replace('%', '')) / 100 || 0;
-            const parseCurrency = (str) => parseFloat(String(str).replace(/[$,₡]/g, '').replace(',', '')) || 0;
+            const parseCurrency = (str) => parseFloat(String(str).replace(/[$,₡]/g, '').replace(',', '.')) || 0;
             const formatUSD = (num) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
             const formatCRC = (num) => new Intl.NumberFormat('es-CR', { style: 'currency', currency: 'CRC' }).format(num);
 
@@ -466,7 +487,7 @@
                 } else {
                     if (appState.currentUser.Rol === 'Admin') {
                         alert('ADVERTENCIA: No se pudo conectar con Google Sheets. La aplicación se ejecutará en modo offline.');
-                        citasTableBody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-500">Modo Offline: No se pudo cargar la información.</td></tr>`;
+                        citasTableBody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-500">Modo Offline: No se pudo cargar la información.</td></tr>`;
                         document.querySelector('button[type="submit"]').disabled = true;
                     }
                 }
@@ -491,6 +512,7 @@
                     const password = loginForm.password.value;
                     const dataLoaded = await fetchData();
 
+                    // Hardcoded admin user
                     if (username === 'admin' && password === 'admin') {
                         appState.currentUser = { Usuario: 'Admin', Rol: 'Admin' };
                         initializeApp();
@@ -555,10 +577,32 @@
                 populate(formFields.metodoPago, appState.data.metodosDePago, p => p.Tipo, p => p.Tipo);
             }
 
+            function generateActionButtons(cita) {
+                const role = appState.currentUser.Rol;
+                let buttons = '';
+                
+                const viewBtn = `<button data-id="${cita.ID}" class="view-btn text-green-600 hover:text-green-800" title="Ver"><span class="material-symbols-outlined">visibility</span></button>`;
+                const editBtn = `<button data-id="${cita.ID}" class="edit-btn text-blue-600 hover:text-blue-800" title="Editar"><span class="material-symbols-outlined">edit</span></button>`;
+                const deleteBtn = `<button data-id="${cita.ID}" class="delete-btn text-red-600 hover:text-red-800" title="Eliminar"><span class="material-symbols-outlined">delete</span></button>`;
+
+                switch (role) {
+                    case 'Examenes':
+                        buttons = viewBtn;
+                        break;
+                    case 'Imagenes':
+                        buttons = viewBtn + editBtn;
+                        break;
+                    case 'Admin':
+                        buttons = viewBtn + editBtn + deleteBtn;
+                        break;
+                }
+                return buttons;
+            }
+
             function renderCitasTable(citas) {
                 citasTableBody.innerHTML = '';
                 if (!citas || citas.length === 0) {
-                    citasTableBody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-500">No hay registros para mostrar.</td></tr>`;
+                    citasTableBody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-500">No hay registros para mostrar.</td></tr>`;
                     return;
                 }
                 citas.forEach(cita => {
@@ -578,10 +622,7 @@
                                 ${enviado ? 'check_circle' : 'hourglass_top'}
                             </span>
                         </td>
-                        <td class="py-4 px-3 text-center">
-                            <button data-id="${cita.ID}" class="edit-btn text-blue-600 hover:text-blue-800" title="Editar"><span class="material-symbols-outlined">edit</span></button>
-                            <button data-id="${cita.ID}" class="delete-btn text-red-600 hover:text-red-800" title="Eliminar"><span class="material-symbols-outlined">delete</span></button>
-                        </td>
+                        <td class="py-4 px-3 text-center space-x-2">${generateActionButtons(cita)}</td>
                     `;
                     citasTableBody.appendChild(row);
                 });
@@ -593,6 +634,7 @@
             function setupAppEventListeners() {
                 logoutButton.addEventListener('click', handleLogout);
                 citaForm.addEventListener('submit', handleFormSubmit);
+                clearFormBtn.addEventListener('click', resetForm);
                 
                 Object.values(nav).forEach(btn => btn.addEventListener('click', (e) => {
                     const view = e.currentTarget.id.includes('registrar') ? 'registrar' : 'consultar';
@@ -615,7 +657,8 @@
                     const button = e.target.closest('button');
                     if (!button) return;
                     const citaId = button.dataset.id;
-                    if (button.classList.contains('edit-btn')) handleEditClick(citaId);
+                    if (button.classList.contains('view-btn')) handleViewClick(citaId);
+                    else if (button.classList.contains('edit-btn')) handleEditClick(citaId);
                     else if (button.classList.contains('delete-btn')) handleDeleteClick(citaId);
                 });
                 
@@ -653,36 +696,54 @@
                 const ivaPercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.IVA) : 0;
                 const feePercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.Fees) : 0;
                 const iva_O = montoTotalDescontado_M * ivaPercent;
-                const fee_P = montoTotalDescontado_M * feePercent;
                 const montoTotalConIVA_Q = montoTotalDescontado_M + iva_O;
+                const fee_P = montoTotalConIVA_Q * feePercent; // Fee is often calculated on the total with tax
+
+                const totalACobrar = montoTotalConIVA_Q + fee_P;
 
                 resumenFields.base.value = formatUSD(montoTotal_J);
-                resumenFields.totalUsd.textContent = formatUSD(montoTotalConIVA_Q + fee_P); // Total a cobrar al cliente
-                resumenFields.totalCrc.textContent = formatCRC((montoTotalConIVA_Q + fee_P) * tipoCambio_R);
+                resumenFields.totalUsd.textContent = formatUSD(totalACobrar);
+                resumenFields.totalCrc.textContent = formatCRC(totalACobrar * tipoCambio_R);
+            }
+
+            function setFormState(disabled) {
+                Object.values(formFields).forEach(field => {
+                    if (field.tagName === 'DIV') { // For the button group container
+                        field.querySelectorAll('button').forEach(btn => btn.disabled = disabled);
+                    } else {
+                        field.disabled = disabled;
+                    }
+                });
+                citaForm.querySelector('button[type="submit"]').style.display = disabled ? 'none' : 'flex';
             }
 
             function resetForm() {
                 citaForm.reset();
                 formFields.id.value = '';
-                formFields.rowIndex.value = '';
                 appState.isEditing = false;
-                formFields.fecha.textContent = new Date().toLocaleDateString('es-CR');
+                appState.isViewing = false;
+                
+                const today = new Date().toISOString().split('T')[0];
+                formFields.fechaEstudio.value = today;
+
                 formFields.registra.textContent = appState.currentUser.Usuario;
-                document.querySelector('button[type="submit"]').textContent = 'Guardar Registro';
-                handleEspecialidadChange(); // To populate services for default especialidad
+                citaForm.querySelector('button[type="submit"]').textContent = 'Guardar';
+                setFormState(false); // Enable form for new entry
+                handleEspecialidadChange();
             }
 
-            function handleEditClick(citaId) {
+            function loadCitaIntoForm(citaId) {
                 const cita = appState.data.citas.find(c => c.ID === citaId);
                 if (!cita) return;
 
-                showView('registrar');
-                appState.isEditing = true;
-                
                 formFields.id.value = cita.ID;
-                formFields.rowIndex.value = cita.rowIndex;
                 formFields.nombre.value = cita.Nombre;
                 formFields.identificacion.value = cita.Identificación;
+
+                // Date formatting: from DD/MM/YYYY to YYYY-MM-DD
+                const dateParts = cita['Fecha de Estudio'].split('/');
+                const isoDate = `${dateParts[2]}-${dateParts[1].padStart(2, '0')}-${dateParts[0].padStart(2, '0')}`;
+                formFields.fechaEstudio.value = isoDate;
 
                 formFields.especialidadContainer.querySelectorAll('button').forEach(btn => {
                     btn.classList.toggle('active', btn.dataset.studyType === cita.Especialidad);
@@ -699,8 +760,23 @@
                     formFields.enviado.checked = cita.Enviado && cita.Enviado.toLowerCase() === 'si';
                     calculateAll();
                 }, 100);
+            }
 
-                document.querySelector('button[type="submit"]').textContent = 'Actualizar Registro';
+            function handleViewClick(citaId) {
+                appState.isViewing = true;
+                appState.isEditing = false;
+                loadCitaIntoForm(citaId);
+                setFormState(true); // Disable all fields
+                showView('registrar');
+            }
+
+            function handleEditClick(citaId) {
+                appState.isEditing = true;
+                appState.isViewing = false;
+                loadCitaIntoForm(citaId);
+                setFormState(false); // Ensure form is enabled
+                citaForm.querySelector('button[type="submit"]').textContent = 'Actualizar';
+                showView('registrar');
             }
 
             async function handleDeleteClick(citaId) {
@@ -712,7 +788,7 @@
                 try {
                     const response = await fetchWithTimeout('/.netlify/functions/delete-cita', {
                         method: 'DELETE',
-                        body: JSON.stringify({ ID: cita.ID, tipoEstudio: cita.Especialidad, rowIndex: cita.rowIndex })
+                        body: JSON.stringify({ ID: cita.ID, tipoEstudio: cita.Especialidad })
                     });
                     if (!response.ok) throw new Error('Error en el servidor al eliminar.');
                     
@@ -728,12 +804,14 @@
             
             async function handleFormSubmit(event) {
                 event.preventDefault();
+                if (appState.isViewing) return; // Prevent saving in view-only mode
                 
                 const selectedService = appState.data.servicios.find(s => s['Producto o Servicio'] === formFields.tipoEstudio.value);
                 const selectedMetodoPago = appState.data.metodosDePago.find(mp => mp.Tipo === formFields.metodoPago.value);
                 const selectedMedicoReporta = appState.data.medicos.find(m => m.Medico === formFields.medicoReporta.value);
                 const activeEspecialidad = formFields.especialidadContainer.querySelector('.active').dataset.studyType;
 
+                // Re-calculate all values to ensure data integrity
                 const montoTotal_J = selectedService ? parseCurrency(selectedService.Precio) : 0;
                 const descuento_K = parseFloat(formFields.descuento.value) || 0;
                 const tipoCambio_R = parseFloat(formFields.tipoCambio.value) || 520;
@@ -741,32 +819,35 @@
                 const ivaPercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.IVA) : 0;
                 const feePercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.Fees) : 0;
                 const iva_O = montoTotalDescontado_M * ivaPercent;
-                const fee_P = montoTotalDescontado_M * feePercent;
                 const montoTotalConIVA_Q = montoTotalDescontado_M + iva_O;
+                const fee_P = montoTotalConIVA_Q * feePercent;
                 const cobrarUSD_T = montoTotalConIVA_Q + fee_P;
                 const cobrarCRC_S = cobrarUSD_T * tipoCambio_R;
                 const porcentajeComision_U = selectedMedicoReporta ? parsePercent(selectedMedicoReporta.Comisión) : 0;
                 let comisionDolares_W = 0;
                 if (selectedService && porcentajeComision_U > 0) {
                     if (selectedService.Cobro === 'Normal') {
-                        comisionDolares_W = ((montoTotalDescontado_M * (1 + ivaPercent)) - fee_P) * porcentajeComision_U;
+                        comisionDolares_W = (montoTotalDescontado_M - fee_P) * porcentajeComision_U;
                     } else {
-                        const baseComision_BC = parseCurrency(selectedService['Base para comisión']);
-                        const montoPagar_MP = parseCurrency(selectedService['Moto a pagar']);
-                        const parte1 = ((baseComision_BC * (1 - descuento_K)) * (1 + ivaPercent)) - ((baseComision_BC / montoTotal_J) * fee_P);
-                        const parte2 = ((montoPagar_MP * (1 - descuento_K)) * (1 + ivaPercent)) - ((montoPagar_MP / montoTotal_J) * fee_P);
-                        comisionDolares_W = (parte1 * porcentajeComision_U) + parte2;
+                         const baseComision_BC = parseCurrency(selectedService['Base para comisión']);
+                         const montoPagar_MP = parseCurrency(selectedService['Moto a pagar']);
+                         const parte1 = (baseComision_BC * (1-descuento_K)) - ((baseComision_BC / montoTotal_J) * fee_P);
+                         const parte2 = (montoPagar_MP * (1-descuento_K)) - ((montoPagar_MP / montoTotal_J) * fee_P);
+                         comisionDolares_W = (parte1 * porcentajeComision_U) + parte2;
                     }
                 }
                 const comisionColones_V = comisionDolares_W * tipoCambio_R;
-                const debitoFiscal_X = ((montoTotalConIVA_Q) / (1 + ivaPercent)) * ivaPercent;
-                const creditoFiscal_Y = debitoFiscal_X;
+                const debitoFiscal_X = iva_O;
+                const creditoFiscal_Y = fee_P;
                 const ivaPagadoHacienda_Z = debitoFiscal_X - creditoFiscal_Y;
+
+                const dateParts = formFields.fechaEstudio.value.split('-');
+                const formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
 
                 const citaData = {
                     ID: formFields.id.value || `ID-${Date.now()}`,
                     Enviado: formFields.enviado.checked ? 'Si' : 'No',
-                    'Fecha de Estudio': new Date().toLocaleDateString('es-CR'),
+                    'Fecha de Estudio': formattedDate,
                     Nombre: formFields.nombre.value,
                     Identificación: formFields.identificacion.value,
                     Especialidad: activeEspecialidad,
@@ -789,16 +870,16 @@
                     'Comisión en Dólares': formatUSD(comisionDolares_W),
                     'Debito Fiscal': formatUSD(debitoFiscal_X),
                     'Crédito Fiscal': formatUSD(creditoFiscal_Y),
-                    'IVA Pagado a Hacienda': formatUSD(ivaPagadoHacienda_Z),
+                    'IVA Pagado a Hacienda': formatUSD(ivaPagadoHacienda_Z > 0 ? ivaPagadoHacienda_Z : 0),
                 };
                 
                 const endpoint = appState.isEditing ? '/.netlify/functions/update-cita' : '/.netlify/functions/add-cita';
                 const method = appState.isEditing ? 'PUT' : 'POST';
-                const payload = { ...citaData, tipoEstudio: citaData.Especialidad, rowIndex: formFields.rowIndex.value };
+                const payload = { ...citaData, tipoEstudio: citaData.Especialidad };
 
                 try {
                     const response = await fetchWithTimeout(endpoint, { method: method, body: JSON.stringify(payload) });
-                    if (!response.ok) throw new Error(`Error en el servidor: ${response.statusText}`);
+                    if (!response.ok) throw new Error(`Error en el servidor: ${await response.text()}`);
                     
                     await fetchData();
                     renderCitasTable(appState.data.citas);
