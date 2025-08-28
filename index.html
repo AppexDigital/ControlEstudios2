@@ -146,33 +146,12 @@
             margin-bottom: 0.5rem;
             display: block;
         }
-        /* Ajuste para el tamaño de la fuente de los totales */
         .total-amount {
-            font-size: clamp(1.5rem, 5vw, 2.25rem); /* Se ajusta entre 24px y 36px */
+            font-size: clamp(1.5rem, 5vw, 2.25rem);
         }
-        #loader-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(255, 255, 255, 0.8);
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            z-index: 9999; transition: opacity 0.3s;
-        }
-        .loader {
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid var(--color-primary);
-            border-radius: 50%;
-            width: 50px; height: 50px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-
-    <!-- Overlay de Carga -->
-    <div id="loader-overlay" class="hidden">
-        <div class="loader"></div>
-        <p class="mt-4 text-lg font-semibold text-slate-700">Procesando...</p>
-    </div>
 
     <!-- 1. Pantalla de Login -->
     <div id="login-screen" class="flex items-center justify-center h-full login-background p-4">
@@ -238,7 +217,7 @@
                     <input type="hidden" id="cita-id">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-x-8 gap-y-6">
                         
-                        <!-- Columna 1: Paciente y Servicio -->
+                        <!-- Columna 1 -->
                         <div class="space-y-6 flex flex-col">
                             <h3 class="form-section-title"><span class="material-symbols-outlined">person</span>Información del Paciente</h3>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -261,13 +240,11 @@
                             </div>
                             <div>
                                 <label class="label" for="tipo-estudio">Servicio Específico</label>
-                                <select id="tipo-estudio" class="input-field w-full" required>
-                                    <option value="">Seleccione un tipo de estudio...</option>
-                                </select>
+                                <select id="tipo-estudio" class="input-field w-full" required></select>
                             </div>
                         </div>
                         
-                        <!-- Columna 2: Detalles Médicos y Pago -->
+                        <!-- Columna 2 -->
                         <div class="space-y-6 flex flex-col">
                              <h3 class="form-section-title"><span class="material-symbols-outlined">medical_information</span>Detalles del Exámen</h3>
                              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -300,7 +277,7 @@
                             </div>
                         </div>
 
-                        <!-- Columna 3: Resumen de Pago -->
+                        <!-- Columna 3 -->
                         <div class="space-y-6 flex flex-col">
                             <h3 class="form-section-title"><span class="material-symbols-outlined">receipt_long</span>Resumen de Pago</h3>
                             <div class="bg-slate-100 p-4 rounded-xl border-2 border-slate-200 space-y-4 flex flex-col flex-grow justify-center">
@@ -373,7 +350,6 @@
                                 </tr>
                             </thead>
                             <tbody id="citas-table-body" class="divide-y divide-slate-200 bg-white">
-                                <!-- Las filas se insertarán aquí dinámicamente -->
                             </tbody>
                         </table>
                     </div>
@@ -396,26 +372,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // =================================================================================
-            // STATE MANAGEMENT & GLOBAL VARIABLES
-            // =================================================================================
-            const appState = {
-                currentUser: null,
-                data: {
-                    usuarios: [],
-                    servicios: [],
-                    medicos: [],
-                    metodosDePago: [],
-                    descuentos: [],
-                    citas: []
-                },
-                isEditing: false,
-                isViewing: false,
-            };
+            const appState = { currentUser: null, data: {}, isEditing: false, isViewing: false };
 
-            // =================================================================================
-            // DOM ELEMENT SELECTORS
-            // =================================================================================
             const loaderOverlay = document.getElementById('loader-overlay');
             const loginScreen = document.getElementById('login-screen');
             const appScreen = document.getElementById('app-screen');
@@ -462,16 +420,10 @@
                 totalCrc: document.getElementById('resumen-total-crc')
             };
 
-            // =================================================================================
-            // UTILITY & HELPER FUNCTIONS
-            // =================================================================================
             const showLoader = (show) => { loaderOverlay.style.display = show ? 'flex' : 'none'; };
             const parsePercent = (str) => parseFloat(String(str).replace('%', '')) / 100 || 0;
             const parseCurrency = (str) => parseFloat(String(str).replace(/[$,₡]/g, '').replace(',', '.')) || 0;
-            
-            // --- NEW FORMATTING FUNCTIONS FOR GOOGLE SHEETS ---
             const formatNumberForSheet = (num) => String(num.toFixed(2)).replace('.', ',');
-
             const formatUSD = (num) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
             const formatCRC = (num) => new Intl.NumberFormat('es-CR', { style: 'currency', currency: 'CRC' }).format(num);
 
@@ -489,9 +441,6 @@
                 }
             }
 
-            // =================================================================================
-            // DATA FETCHING & INITIALIZATION
-            // =================================================================================
             async function fetchData() {
                 try {
                     const response = await fetchWithTimeout('/.netlify/functions/get-data');
@@ -509,9 +458,7 @@
                 appScreen.style.display = 'flex';
                 userDisplay.textContent = appState.currentUser.Usuario;
                 roleDisplay.textContent = `Rol: ${appState.currentUser.Rol}`;
-
                 const dataLoaded = appState.data.servicios && appState.data.servicios.length > 0;
-
                 if (dataLoaded) {
                     populateFormDropdowns();
                     renderCitasTable(appState.data.citas);
@@ -523,39 +470,31 @@
                         document.querySelector('button[type="submit"]').disabled = true;
                     }
                 }
-                
                 setupAppEventListeners();
                 resetForm();
                 showView('registrar');
             }
 
-            // =================================================================================
-            // AUTHENTICATION & NAVIGATION LOGIC
-            // =================================================================================
             const handleLogin = async (event) => {
                 event.preventDefault();
                 loginError.classList.add('hidden');
                 const submitButton = loginForm.querySelector('button[type="submit"]');
                 submitButton.disabled = true;
                 submitButton.textContent = 'Verificando...';
-
                 try {
                     const username = loginForm.username.value;
                     const password = loginForm.password.value;
                     const dataLoaded = await fetchData();
-
                     if (username === 'admin' && password === 'admin') {
                         appState.currentUser = { Usuario: 'Admin', Rol: 'Admin' };
                         initializeApp();
                         return;
                     }
-
                     if (!dataLoaded) {
                         loginError.textContent = 'No se pudo conectar con la base de datos.';
                         loginError.classList.remove('hidden');
                         return;
                     }
-
                     const foundUser = appState.data.usuarios.find(u => u.Usuario === username && u.Contraseña === password);
                     if (foundUser) {
                         appState.currentUser = foundUser;
@@ -581,7 +520,6 @@
             function showView(viewName) {
                 Object.values(views).forEach(view => view.classList.add('hidden'));
                 views[viewName].classList.remove('hidden');
-
                 const isRegistrar = viewName === 'registrar';
                 nav.registrar.classList.toggle('active', isRegistrar);
                 nav.consultar.classList.toggle('active', !isRegistrar);
@@ -589,9 +527,6 @@
                 nav.consultarMobile.style.color = !isRegistrar ? 'var(--color-secondary)' : '#6b7280';
             }
 
-            // =================================================================================
-            // UI RENDERING & POPULATION
-            // =================================================================================
             function populateFormDropdowns() {
                 const populate = (select, data, textFn, valueFn) => {
                     select.innerHTML = '<option value="">Seleccione...</option>';
@@ -611,21 +546,13 @@
             function generateActionButtons(cita) {
                 const role = appState.currentUser.Rol;
                 let buttons = '';
-                
                 const viewBtn = `<button data-id="${cita.ID}" class="view-btn text-green-600 hover:text-green-800" title="Ver"><span class="material-symbols-outlined">visibility</span></button>`;
                 const editBtn = `<button data-id="${cita.ID}" class="edit-btn text-blue-600 hover:text-blue-800" title="Editar"><span class="material-symbols-outlined">edit</span></button>`;
                 const deleteBtn = `<button data-id="${cita.ID}" class="delete-btn text-red-600 hover:text-red-800" title="Eliminar"><span class="material-symbols-outlined">delete</span></button>`;
-
                 switch (role) {
-                    case 'Examenes':
-                        buttons = viewBtn;
-                        break;
-                    case 'Imagenes':
-                        buttons = viewBtn + editBtn;
-                        break;
-                    case 'Admin':
-                        buttons = viewBtn + editBtn + deleteBtn;
-                        break;
+                    case 'Examenes': buttons = viewBtn; break;
+                    case 'Imagenes': buttons = viewBtn + editBtn; break;
+                    case 'Admin': buttons = viewBtn + editBtn + deleteBtn; break;
                 }
                 return buttons;
             }
@@ -641,7 +568,6 @@
                     row.className = 'hover:bg-slate-50';
                     const enviado = cita.Enviado && cita.Enviado.toLowerCase() === 'si';
                     const montoFinal = parseCurrency(cita['Monto total Descontado con IVA']);
-
                     row.innerHTML = `
                         <td class="whitespace-nowrap py-4 px-3 text-sm font-medium text-slate-900">${cita.Nombre || ''}</td>
                         <td class="whitespace-nowrap py-4 px-3 text-sm text-slate-600">${cita['Fecha de Estudio'] || ''}</td>
@@ -659,19 +585,14 @@
                 });
             }
 
-            // =================================================================================
-            // EVENT LISTENERS
-            // =================================================================================
             function setupAppEventListeners() {
                 logoutButton.addEventListener('click', handleLogout);
                 citaForm.addEventListener('submit', handleFormSubmit);
                 clearFormBtn.addEventListener('click', resetForm);
-                
                 Object.values(nav).forEach(btn => btn.addEventListener('click', (e) => {
                     const view = e.currentTarget.id.includes('registrar') ? 'registrar' : 'consultar';
                     showView(view);
                 }));
-
                 formFields.especialidadContainer.addEventListener('click', (e) => {
                     const button = e.target.closest('button');
                     if (button && !button.classList.contains('active')) {
@@ -680,10 +601,8 @@
                         handleEspecialidadChange();
                     }
                 });
-
                 const calculationInputs = [formFields.tipoEstudio, formFields.descuento, formFields.metodoPago, formFields.tipoCambio];
                 calculationInputs.forEach(input => input.addEventListener('change', calculateAll));
-
                 citasTableBody.addEventListener('click', (e) => {
                     const button = e.target.closest('button');
                     if (!button) return;
@@ -692,7 +611,6 @@
                     else if (button.classList.contains('edit-btn')) handleEditClick(citaId);
                     else if (button.classList.contains('delete-btn')) handleDeleteClick(citaId);
                 });
-                
                 searchInput.addEventListener('keyup', () => {
                     const searchTerm = searchInput.value.toLowerCase();
                     const filteredCitas = appState.data.citas.filter(cita => 
@@ -702,13 +620,9 @@
                 });
             }
 
-            // =================================================================================
-            // CORE LOGIC
-            // =================================================================================
             function handleEspecialidadChange() {
                 const activeBtn = formFields.especialidadContainer.querySelector('.active');
                 const especialidad = activeBtn ? activeBtn.dataset.studyType : null;
-                
                 const services = appState.data.servicios.filter(s => s.Código === especialidad);
                 const options = services.map(s => `<option value="${s['Producto o Servicio']}">${s['Producto o Servicio']}</option>`).join('');
                 formFields.tipoEstudio.innerHTML = `<option value="">Seleccione...</option>${options}`;
@@ -718,20 +632,16 @@
             function calculateAll() {
                 const selectedService = appState.data.servicios.find(s => s['Producto o Servicio'] === formFields.tipoEstudio.value);
                 const selectedMetodoPago = appState.data.metodosDePago.find(mp => mp.Tipo === formFields.metodoPago.value);
-
                 const montoTotal_J = selectedService ? parseCurrency(selectedService.Precio) : 0;
                 const descuento_K = parseFloat(formFields.descuento.value) || 0;
                 const tipoCambio_R = parseFloat(formFields.tipoCambio.value) || 520;
-
                 const montoTotalDescontado_M = montoTotal_J * (1 - descuento_K);
                 const ivaPercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.IVA) : 0;
                 const feePercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.Fees) : 0;
                 const iva_O = montoTotalDescontado_M * ivaPercent;
                 const montoTotalConIVA_Q = montoTotalDescontado_M + iva_O;
                 const fee_P = montoTotalConIVA_Q * feePercent;
-
                 const totalACobrar = montoTotalConIVA_Q + fee_P;
-
                 resumenFields.base.value = formatUSD(montoTotal_J);
                 resumenFields.totalUsd.textContent = formatUSD(totalACobrar);
                 resumenFields.totalCrc.textContent = formatCRC(totalACobrar * tipoCambio_R);
@@ -746,7 +656,7 @@
                     }
                 });
                 citaForm.querySelector('button[type="submit"]').style.display = disabled ? 'none' : 'flex';
-                clearFormBtn.style.display = disabled ? 'flex' : 'flex'; // Always show clear
+                clearFormBtn.style.display = disabled ? 'flex' : 'flex';
             }
 
             function resetForm() {
@@ -754,10 +664,8 @@
                 formFields.id.value = '';
                 appState.isEditing = false;
                 appState.isViewing = false;
-                
                 const today = new Date().toISOString().split('T')[0];
                 formFields.fechaEstudio.value = today;
-
                 formFields.registra.textContent = appState.currentUser.Usuario;
                 citaForm.querySelector('button[type="submit"]').textContent = 'Guardar';
                 setFormState(false);
@@ -767,20 +675,16 @@
             function loadCitaIntoForm(citaId) {
                 const cita = appState.data.citas.find(c => c.ID === citaId);
                 if (!cita) return;
-
                 formFields.id.value = cita.ID;
                 formFields.nombre.value = cita.Nombre;
                 formFields.identificacion.value = cita.Identificación;
-
                 const dateParts = cita['Fecha de Estudio'].split('/');
                 const isoDate = `${dateParts[2]}-${dateParts[1].padStart(2, '0')}-${dateParts[0].padStart(2, '0')}`;
                 formFields.fechaEstudio.value = isoDate;
-
                 formFields.especialidadContainer.querySelectorAll('button').forEach(btn => {
                     btn.classList.toggle('active', btn.dataset.studyType === cita.Especialidad);
                 });
                 handleEspecialidadChange();
-                
                 setTimeout(() => {
                     formFields.tipoEstudio.value = cita['Tipo de Estudio'];
                     formFields.medicoRefiere.value = cita['Medico que Refiere'];
@@ -812,10 +716,8 @@
 
             async function handleDeleteClick(citaId) {
                 if (!confirm('¿Estás seguro de que deseas eliminar este registro?')) return;
-                
                 const cita = appState.data.citas.find(c => c.ID === citaId);
                 if (!cita) return;
-
                 showLoader(true);
                 try {
                     const response = await fetchWithTimeout('/.netlify/functions/delete-cita', {
@@ -823,11 +725,9 @@
                         body: JSON.stringify({ ID: cita.ID, tipoEstudio: cita.Especialidad })
                     });
                     if (!response.ok) throw new Error('Error en el servidor al eliminar.');
-                    
                     await fetchData();
                     renderCitasTable(appState.data.citas);
                     alert('Registro eliminado con éxito.');
-
                 } catch (error) {
                     console.error('Delete Error:', error);
                     alert('No se pudo eliminar el registro.');
@@ -839,14 +739,11 @@
             async function handleFormSubmit(event) {
                 event.preventDefault();
                 if (appState.isViewing) return;
-                
                 showLoader(true);
-
                 const selectedService = appState.data.servicios.find(s => s['Producto o Servicio'] === formFields.tipoEstudio.value);
                 const selectedMetodoPago = appState.data.metodosDePago.find(mp => mp.Tipo === formFields.metodoPago.value);
                 const selectedMedicoReporta = appState.data.medicos.find(m => m.Medico === formFields.medicoReporta.value);
                 const activeEspecialidad = formFields.especialidadContainer.querySelector('.active').dataset.studyType;
-
                 const montoTotal_J = selectedService ? parseCurrency(selectedService.Precio) : 0;
                 const descuento_K = parseFloat(formFields.descuento.value) || 0;
                 const tipoCambio_R = parseFloat(formFields.tipoCambio.value) || 520;
@@ -875,10 +772,8 @@
                 const debitoFiscal_X = iva_O;
                 const creditoFiscal_Y = fee_P;
                 const ivaPagadoHacienda_Z = debitoFiscal_X - creditoFiscal_Y;
-
                 const dateParts = formFields.fechaEstudio.value.split('-');
                 const formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
-
                 const citaData = {
                     ID: formFields.id.value || Math.floor(100000 + Math.random() * 900000).toString(),
                     Enviado: formFields.enviado.checked ? 'Si' : 'No',
@@ -907,20 +802,16 @@
                     'Crédito Fiscal': formatNumberForSheet(creditoFiscal_Y),
                     'IVA Pagado a Hacienda': formatNumberForSheet(ivaPagadoHacienda_Z > 0 ? ivaPagadoHacienda_Z : 0),
                 };
-                
                 const endpoint = appState.isEditing ? '/.netlify/functions/update-cita' : '/.netlify/functions/add-cita';
                 const method = appState.isEditing ? 'PUT' : 'POST';
                 const payload = { ...citaData, tipoEstudio: citaData.Especialidad };
-
                 try {
                     const response = await fetchWithTimeout(endpoint, { method: method, body: JSON.stringify(payload) });
                     if (!response.ok) throw new Error(`Error en el servidor: ${await response.text()}`);
-                    
                     await fetchData();
                     renderCitasTable(appState.data.citas);
                     resetForm();
                     alert(`Registro ${appState.isEditing ? 'actualizado' : 'guardado'} con éxito.`);
-
                 } catch (error) {
                     console.error("Submit Error:", error);
                     alert('No se pudo guardar el registro.');
@@ -928,12 +819,9 @@
                     showLoader(false);
                 }
             }
-
-            // =================================================================================
-            // INITIAL LOAD
-            // =================================================================================
             loginForm.addEventListener('submit', handleLogin);
         });
     </script>
 </body>
 </html>
+
