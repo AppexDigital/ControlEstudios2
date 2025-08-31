@@ -440,14 +440,24 @@
             // UTILITY FUNCTIONS
             // =================================================================================
             const parsePercent = (val) => parseFloat(String(val).replace('%', '')) / 100 || 0;
+            
+            // ARCHITECTURAL FIX: More robust number parsing to handle various formats from Sheets.
             const parseNumber = (val) => {
                 if (typeof val === 'number') return val;
-                if (typeof val === 'string') {
-                    const cleaned = val.replace(/[$,₡]/g, '').replace(',', '.');
-                    return parseFloat(cleaned) || 0;
+                if (typeof val !== 'string' || !val) return 0;
+
+                // Remove currency symbols, spaces, and thousand separators (dots).
+                let cleanVal = val.trim().replace(/[$,₡\s]/g, '');
+                
+                // If it has a comma as decimal separator, replace it with a dot.
+                if (cleanVal.includes(',')) {
+                    cleanVal = cleanVal.replace(/\./g, '').replace(',', '.');
                 }
-                return 0;
+                
+                const num = parseFloat(cleanVal);
+                return isNaN(num) ? 0 : num;
             };
+
             const formatUSD = (num) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
             const formatCRC = (num) => new Intl.NumberFormat('es-CR', { style: 'currency', currency: 'CRC' }).format(num);
             const showLoader = (show) => loader.classList.toggle('hidden', !show);
@@ -456,7 +466,6 @@
                 const controller = new AbortController();
                 const id = setTimeout(() => controller.abort(), timeout);
                 
-                // ARCHITECTURAL FIX: Always add Content-Type header for requests with a body.
                 const newOptions = {
                     ...options,
                     headers: { 'Content-Type': 'application/json', ...options.headers },
@@ -468,6 +477,9 @@
                     if (!response.ok) {
                         const errorBody = await response.json().catch(() => ({ error: response.statusText }));
                         throw new Error(errorBody.error || 'Respuesta no exitosa del servidor.');
+                    }
+                    if (response.status === 204 || response.headers.get('content-length') === '0') {
+                        return {};
                     }
                     return response.json();
                 } catch (error) {
@@ -481,7 +493,6 @@
             async function fetchData() {
                 showLoader(true);
                 try {
-                    // Use GET method for fetching data, no body needed.
                     appState.data = await apiCall('/.netlify/functions/get-data', { method: 'GET' });
                     return true;
                 } catch (error) {
@@ -498,11 +509,15 @@
             // APPLICATION LOGIC (LOGIN, NAVIGATION, RENDERING)
             // =================================================================================
             
-            function initializeApp() {
+            function initializeApp(isOffline = false) {
                 loginScreen.style.display = 'none';
                 appScreen.style.display = 'flex';
                 userDisplay.textContent = appState.currentUser.Usuario;
                 roleDisplay.textContent = `Rol: ${appState.currentUser.Rol}`;
+                
+                if(isOffline){
+                    roleDisplay.textContent += ' (Modo Offline)';
+                }
 
                 populateFormDropdowns();
                 renderCitasTable(appState.data.citas);
@@ -526,16 +541,21 @@
                 const password = loginForm.password.value;
 
                 if (username.toLowerCase() === 'admin' && password === 'Admin') {
-                    if (await fetchData()) {
-                        appState.currentUser = { Usuario: 'Admin', Rol: 'Admin' };
-                        initializeApp();
+                    appState.currentUser = { Usuario: 'Admin', Rol: 'Admin' };
+                    
+                    const online = await fetchData();
+                    if (!online) {
+                        appState.data = { usuarios: [], servicios: [], medicos: [], metodosDePago: [], descuentos: [], citas: [] };
+                        alert('No se pudo conectar al servidor. Entrando en modo offline. Las funciones de guardar y ver datos no estarán disponibles.');
                     }
+                    initializeApp(!online);
+
                 } else {
                     if (await fetchData()) {
                         const foundUser = appState.data.usuarios.find(u => u.Usuario === username && u.Contraseña === password);
                         if (foundUser) {
                             appState.currentUser = foundUser;
-                            initializeApp();
+                            initializeApp(false);
                         } else {
                             loginError.textContent = 'Usuario o contraseña incorrectos.';
                             loginError.classList.remove('hidden');
@@ -564,7 +584,7 @@
             }
 
             function populateFormDropdowns() {
-                const populate = (select, data, textFn, valueFn) => {
+                const populate = (select, data = [], textFn, valueFn) => {
                     select.innerHTML = '<option value="">Seleccione...</option>';
                     data.forEach(item => {
                         const option = document.createElement('option');
@@ -579,7 +599,7 @@
                 populate(formFields.metodoPago, appState.data.metodosDePago, p => p.Tipo, p => p.Tipo);
             }
 
-            function renderCitasTable(citas) {
+            function renderCitasTable(citas = []) {
                 citasTableBody.innerHTML = '';
                 if (!citas || citas.length === 0) {
                     citasTableBody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-500">No hay registros para mostrar.</td></tr>`;
@@ -589,6 +609,7 @@
                     const row = document.createElement('tr');
                     row.className = 'hover:bg-slate-50';
                     const enviado = cita.Enviado && cita.Enviado.toLowerCase() === 'si';
+                    // ARCHITECTURAL FIX: Use the robust parseNumber function to correctly read the amount.
                     const montoFinal = parseNumber(cita['Monto total Descontado con IVA']);
                     row.innerHTML = `
                         <td class="whitespace-nowrap py-4 px-3 text-sm font-medium text-slate-900">${cita.Nombre || ''}</td>
@@ -648,7 +669,6 @@
                 const porcentajeComision = selectedMedicoReporta ? parsePercent(selectedMedicoReporta.Comisión) : 0;
                 const tasaIVAMedico = 0.04;
 
-                // ARCHITECTURAL FIX: Aligning calculations with the technical report.
                 const montoTotalDescontado$ = montoTotal$ * (1 - descuento);
                 const iva$ = montoTotalDescontado$ * ivaPercent;
                 const montoTotalDescontadoIVA$ = montoTotalDescontado$ + iva$;
@@ -661,12 +681,12 @@
                     if (selectedService.Cobro === 'Especial') {
                         const baseComision = parseNumber(selectedService['Base para comisión']);
                         const montoPagar = parseNumber(selectedService['Moto a pagar']);
-                        if (montoTotal$ > 0) { // Avoid division by zero
+                        if (montoTotal$ > 0) {
                             const parte1 = ((baseComision * (1 - descuento)) * (1 + tasaIVAMedico)) - ((baseComision / montoTotal$) * fee$);
                             const parte2 = ((montoPagar * (1 - descuento)) * (1 + tasaIVAMedico)) - ((montoPagar / montoTotal$) * fee$);
                             comision$ = (parte1 * porcentajeComision) + parte2;
                         }
-                    } else { // Cobro Normal
+                    } else {
                         comision$ = (cobrar$ - fee$) * porcentajeComision;
                     }
                 }
@@ -674,14 +694,15 @@
                 const debitoFiscal = iva$;
                 const creditoFiscal = (comision$ / (1 + tasaIVAMedico)) * tasaIVAMedico;
                 const ivaPagadoHacienda = debitoFiscal - creditoFiscal;
-
+                
+                // ARCHITECTURAL FIX: Remove condition that prevents negative results for Hacienda.
                 return {
                     'Monto Total': montoTotal$, Descuento: descuento, 'Monto Total Descontado': montoTotalDescontado$,
                     IVA: iva$, Fee: fee$, 'Monto total Descontado con IVA': cobrar$, 'Tipo de cambio': tipoCambio,
                     'Cobrar ₡': cobrarCRC, 'Cobrar $': cobrar$, 'Porcentaje de comisión': porcentajeComision,
                     'Comisión en Colones': comisionCRC, 'Comisión en Dólares': comision$, 'Debito Fiscal': debitoFiscal,
-                    'Crédito Fiscal': creditoFiscal, 'IVA Pagado a Hacienda': ivaPagadoHacienda > 0 ? ivaPagadoHacienda : 0,
-                    montoTotal$, cobrar$, cobrarCRC // Return for display update
+                    'Crédito Fiscal': creditoFiscal, 'IVA Pagado a Hacienda': ivaPagadoHacienda,
+                    montoTotal$, cobrar$, cobrarCRC
                 };
             }
             
@@ -758,7 +779,7 @@
                     
                     const citaData = {
                         ...calculatedData,
-                        // ARCHITECTURAL FIX: Send numeric ID, server handles conversion if needed.
+                        // ARCHITECTURAL FIX: Ensure ID is a number for consistency before sending.
                         ID: appState.isEditing ? parseNumber(formFields.id.value) : maxId + 1,
                         Enviado: formFields.enviado.checked ? 'Si' : 'No',
                         'Fecha de Estudio': formFields.fechaEstudio.value,
@@ -768,10 +789,11 @@
                         'Tipo de Estudio': formFields.tipoEstudio.value,
                         'Medico que Refiere': formFields.medicoRefiere.value,
                         'Medico que Reporta': formFields.medicoReporta.value,
+                        // ARCHITECTURAL FIX: Add missing 'Metodo pago' field to payload.
+                        'Método pago': formFields.metodoPago.value,
                         'Descuento aplicado por': (calculatedData.Descuento > 0) ? appState.currentUser.Usuario : '',
                     };
                     
-                    // ARCHITECTURAL FIX: Payload now includes 'tipoEstudio' for backend routing.
                     const payload = { ...citaData, tipoEstudio: citaData.Especialidad };
                     const endpoint = appState.isEditing ? '/.netlify/functions/update-cita' : '/.netlify/functions/add-cita';
                     const method = appState.isEditing ? 'PUT' : 'POST';
@@ -813,7 +835,7 @@
                 });
                 
                 citaForm.querySelector('button[type="submit"]').style.display = disabled ? 'none' : 'flex';
-                clearFormBtn.disabled = false; // Always enabled to go back or clear.
+                clearFormBtn.disabled = false;
                 
                 if (disabled) {
                     clearFormBtn.querySelector('span').textContent = 'arrow_back';
@@ -839,8 +861,7 @@
             }
 
             function loadCitaIntoForm(citaId) {
-                // ARCHITECTURAL FIX: Comparing numbers to numbers.
-                const cita = appState.data.citas.find(c => parseNumber(c.ID) === parseNumber(citaId));
+                const cita = appState.data.citas.find(c => String(c.ID) === String(citaId));
                 if (!cita) return;
 
                 formFields.id.value = cita.ID;
@@ -883,13 +904,12 @@
             
             async function handleDeleteClick(citaId) {
                 if (!confirm(`¿Está seguro de que desea eliminar el registro ID: ${citaId}?`)) return;
-                const cita = appState.data.citas.find(c => parseNumber(c.ID) === parseNumber(citaId));
+                const cita = appState.data.citas.find(c => String(c.ID) === String(citaId));
                 if (!cita) return;
 
                 showLoader(true);
                 try {
-                    // ARCHITECTURAL FIX: Payload now includes numeric ID and tipoEstudio for routing.
-                    const payload = { ID: parseNumber(cita.ID), tipoEstudio: cita.Especialidad };
+                    const payload = { ID: cita.ID, tipoEstudio: cita.Especialidad };
                     await apiCall('/.netlify/functions/delete-cita', { method: 'DELETE', body: JSON.stringify(payload) });
                     
                     await fetchData();
@@ -911,6 +931,8 @@
     </script>
 </body>
 </html>
+
+
 
 
 
