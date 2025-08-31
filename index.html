@@ -441,18 +441,28 @@
             // =================================================================================
             const parsePercent = (val) => parseFloat(String(val).replace('%', '')) / 100 || 0;
             
-            // ARCHITECTURAL FIX: More robust number parsing to handle various formats from Sheets.
+            // ARCHITECTURAL FIX (v10.5): A highly robust, locale-agnostic number parsing function.
             const parseNumber = (val) => {
                 if (typeof val === 'number') return val;
                 if (typeof val !== 'string' || !val) return 0;
 
-                // Remove currency symbols, spaces, and thousand separators (dots).
-                let cleanVal = val.trim().replace(/[$,₡\s]/g, '');
+                // Standardize the number string.
+                // 1. Find the last dot or comma. This is the most likely decimal separator.
+                const lastDot = val.lastIndexOf('.');
+                const lastComma = val.lastIndexOf(',');
                 
-                // If it has a comma as decimal separator, replace it with a dot.
-                if (cleanVal.includes(',')) {
-                    cleanVal = cleanVal.replace(/\./g, '').replace(',', '.');
+                let cleanVal = val;
+
+                if (lastComma > lastDot) { // Comma is the decimal separator (e.g., 1.234,56)
+                    cleanVal = val.replace(/\./g, '').replace(',', '.');
+                } else if (lastDot > lastComma) { // Dot is the decimal separator (e.g., 1,234.56)
+                    cleanVal = val.replace(/,/g, '');
+                } else { // No separators or only one type
+                     cleanVal = val.replace(/,/g, '.');
                 }
+
+                // Remove anything that is not a digit or a decimal point
+                cleanVal = cleanVal.replace(/[^\d.-]/g, '');
                 
                 const num = parseFloat(cleanVal);
                 return isNaN(num) ? 0 : num;
@@ -530,6 +540,7 @@
                 showView('registrar');
             }
 
+            // ARCHITECTURAL FIX (v10.5): Reworked login flow for true offline admin access.
             const handleLogin = async (event) => {
                 event.preventDefault();
                 loginError.classList.add('hidden');
@@ -543,12 +554,18 @@
                 if (username.toLowerCase() === 'admin' && password === 'Admin') {
                     appState.currentUser = { Usuario: 'Admin', Rol: 'Admin' };
                     
+                    // Grant access first, then try to connect.
+                    initializeApp(true); // Initialize in a temporary offline state.
+
                     const online = await fetchData();
-                    if (!online) {
-                        appState.data = { usuarios: [], servicios: [], medicos: [], metodosDePago: [], descuentos: [], citas: [] };
-                        alert('No se pudo conectar al servidor. Entrando en modo offline. Las funciones de guardar y ver datos no estarán disponibles.');
+                    if (online) {
+                        // If connection succeeds, refresh with real data.
+                        roleDisplay.textContent = `Rol: ${appState.currentUser.Rol}`; // Remove offline tag
+                        populateFormDropdowns();
+                        renderCitasTable(appState.data.citas);
+                    } else {
+                        alert('No se pudo conectar al servidor. La aplicación permanecerá en modo offline.');
                     }
-                    initializeApp(!online);
 
                 } else {
                     if (await fetchData()) {
@@ -609,7 +626,6 @@
                     const row = document.createElement('tr');
                     row.className = 'hover:bg-slate-50';
                     const enviado = cita.Enviado && cita.Enviado.toLowerCase() === 'si';
-                    // ARCHITECTURAL FIX: Use the robust parseNumber function to correctly read the amount.
                     const montoFinal = parseNumber(cita['Monto total Descontado con IVA']);
                     row.innerHTML = `
                         <td class="whitespace-nowrap py-4 px-3 text-sm font-medium text-slate-900">${cita.Nombre || ''}</td>
@@ -695,7 +711,6 @@
                 const creditoFiscal = (comision$ / (1 + tasaIVAMedico)) * tasaIVAMedico;
                 const ivaPagadoHacienda = debitoFiscal - creditoFiscal;
                 
-                // ARCHITECTURAL FIX: Remove condition that prevents negative results for Hacienda.
                 return {
                     'Monto Total': montoTotal$, Descuento: descuento, 'Monto Total Descontado': montoTotalDescontado$,
                     IVA: iva$, Fee: fee$, 'Monto total Descontado con IVA': cobrar$, 'Tipo de cambio': tipoCambio,
@@ -779,7 +794,6 @@
                     
                     const citaData = {
                         ...calculatedData,
-                        // ARCHITECTURAL FIX: Ensure ID is a number for consistency before sending.
                         ID: appState.isEditing ? parseNumber(formFields.id.value) : maxId + 1,
                         Enviado: formFields.enviado.checked ? 'Si' : 'No',
                         'Fecha de Estudio': formFields.fechaEstudio.value,
@@ -789,7 +803,6 @@
                         'Tipo de Estudio': formFields.tipoEstudio.value,
                         'Medico que Refiere': formFields.medicoRefiere.value,
                         'Medico que Reporta': formFields.medicoReporta.value,
-                        // ARCHITECTURAL FIX: Add missing 'Metodo pago' field to payload.
                         'Método pago': formFields.metodoPago.value,
                         'Descuento aplicado por': (calculatedData.Descuento > 0) ? appState.currentUser.Usuario : '',
                     };
@@ -880,7 +893,8 @@
                     formFields.tipoEstudio.value = cita['Tipo de Estudio'];
                     formFields.medicoRefiere.value = cita['Medico que Refiere'];
                     formFields.medicoReporta.value = cita['Medico que Reporta'];
-                    formFields.descuento.value = parsePercent(cita.Descuento);
+                    // ARCHITECTURAL FIX (v10.5): Use robust parseNumber instead of parsePercent.
+                    formFields.descuento.value = parseNumber(cita.Descuento);
                     formFields.metodoPago.value = cita['Método pago'];
                     formFields.tipoCambio.value = parseNumber(cita['Tipo de cambio']);
                     formFields.enviado.checked = cita.Enviado && cita.Enviado.toLowerCase() === 'si';
@@ -931,6 +945,8 @@
     </script>
 </body>
 </html>
+
+
 
 
 
