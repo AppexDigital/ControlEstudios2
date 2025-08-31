@@ -894,10 +894,10 @@
                     formFields.medicoRefiere.value = cita['Medico que Refiere'];
                     formFields.medicoReporta.value = cita['Medico que Reporta'];
                     
-                    // ARCHITECTURAL FIX (v1.5): Se corrige la carga del descuento.
-                    // Ahora se asigna el valor numérico directamente desde los datos (ej: 0.1)
-                    // en lugar de procesarlo incorrectamente con parsePercent.
-                    formFields.descuento.value = parseNumber(cita.Descuento);
+                    // ARCHITECTURAL FIX (v1.6): Se fuerza la conversión a String para asegurar
+                    // la coincidencia exacta con el 'value' de las opciones del <select>,
+                    // resolviendo el bug de carga.
+                    formFields.descuento.value = String(parseNumber(cita.Descuento));
 
                     formFields.metodoPago.value = cita['Método pago'];
                     formFields.tipoCambio.value = parseNumber(cita['Tipo de cambio']);
@@ -949,6 +949,11 @@
     </script>
 </body>
 </html>
+
+
+
+
+
 
 
 
