@@ -893,7 +893,12 @@
                     formFields.tipoEstudio.value = cita['Tipo de Estudio'];
                     formFields.medicoRefiere.value = cita['Medico que Refiere'];
                     formFields.medicoReporta.value = cita['Medico que Reporta'];
-                    formFields.descuento.value = parsePercent(cita.Descuento);
+                    
+                    // ARCHITECTURAL FIX (v1.5): Se corrige la carga del descuento.
+                    // Ahora se asigna el valor numérico directamente desde los datos (ej: 0.1)
+                    // en lugar de procesarlo incorrectamente con parsePercent.
+                    formFields.descuento.value = parseNumber(cita.Descuento);
+
                     formFields.metodoPago.value = cita['Método pago'];
                     formFields.tipoCambio.value = parseNumber(cita['Tipo de cambio']);
                     formFields.enviado.checked = cita.Enviado && cita.Enviado.toLowerCase() === 'si';
@@ -944,6 +949,10 @@
     </script>
 </body>
 </html>
+
+
+
+
 
 
 
