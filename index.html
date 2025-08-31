@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Exámenes - Control de Estudios</title>
+    <title>Gestión de Exámenes - Control de Estudios v1.3</title>
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%231e3a8a%22></rect><path d=%22M30 70 V 30 H 40 V 70 Z M 50 70 V 50 H 60 V 70 Z M 70 70 V 40 H 80 V 70 Z%22 fill=%22%2314b8a6%22></path></svg>">
 
@@ -679,7 +679,10 @@
                 const iva$ = montoTotalDescontado$ * ivaPercent;
                 const montoTotalDescontadoIVA$ = montoTotalDescontado$ + iva$;
                 const fee$ = montoTotalDescontadoIVA$ * feePercent;
-                const cobrar$ = montoTotalDescontadoIVA$ + fee$;
+                
+                // CAMBIO ARQUITECTÓNICO (v1.3): El 'Fee' ya no se suma al total a cobrar al cliente.
+                // Es un costo interno, no un cargo adicional para el paciente.
+                const cobrar$ = montoTotalDescontadoIVA$;
                 const cobrarCRC = cobrar$ * tipoCambio;
 
                 let comision$ = 0;
@@ -693,6 +696,7 @@
                             comision$ = (parte1 * porcentajeComision) + parte2;
                         }
                     } else {
+                        // La comisión se calcula sobre el monto cobrado MENOS el fee.
                         comision$ = (cobrar$ - fee$) * porcentajeComision;
                     }
                 }
@@ -934,6 +938,8 @@
     </script>
 </body>
 </html>
+
+
 
 
 
