@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -316,11 +315,11 @@
                         <div class="flex gap-4 w-full sm:w-auto">
                             <button type="button" id="clear-form-btn" class="btn-secondary w-full sm:w-auto py-3 px-8 rounded-lg text-lg flex items-center justify-center gap-2">
                                 <span class="material-symbols-outlined">cleaning_services</span>
-                                Limpiar
+                                <span>Limpiar</span>
                             </button>
                             <button type="submit" class="btn-primary w-full sm:w-auto py-3 px-8 rounded-lg text-lg flex items-center justify-center gap-2">
                                 <span class="material-symbols-outlined">save</span>
-                                Guardar
+                                <span>Guardar</span>
                             </button>
                         </div>
                     </div>
@@ -372,8 +371,20 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const appState = { currentUser: null, data: {}, isEditing: false, isViewing: false, listenersAttached: false };
+            // =================================================================================
+            // STATE & CONFIG
+            // =================================================================================
+            const appState = {
+                currentUser: null,
+                data: { usuarios: [], servicios: [], medicos: [], metodosDePago: [], descuentos: [], citas: [] },
+                isEditing: false,
+                isViewing: false,
+                listenersAttached: false
+            };
 
+            // =================================================================================
+            // DOM REFERENCES
+            // =================================================================================
             const loginScreen = document.getElementById('login-screen');
             const appScreen = document.getElementById('app-screen');
             const loginForm = document.getElementById('login-form');
@@ -418,56 +429,84 @@
                 totalUsd: document.getElementById('resumen-total-usd'),
                 totalCrc: document.getElementById('resumen-total-crc')
             };
+            
+            const loader = document.createElement('div');
+            loader.id = 'loader-overlay';
+            loader.className = 'fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50 hidden';
+            loader.innerHTML = `<div class="w-16 h-16 border-4 border-t-blue-600 border-gray-200 rounded-full animate-spin"></div>`;
+            document.body.appendChild(loader);
 
-            const parsePercent = (str) => parseFloat(String(str).replace('%', '')) / 100 || 0;
-            const parseCurrency = (str) => parseFloat(String(str).replace(/[$,₡]/g, '').replace(',', '.')) || 0;
-            const formatNumberForSheet = (num) => String(num.toFixed(2)).replace('.', ',');
+            // =================================================================================
+            // UTILITY FUNCTIONS
+            // =================================================================================
+            const parsePercent = (val) => parseFloat(String(val).replace('%', '')) / 100 || 0;
+            const parseNumber = (val) => {
+                if (typeof val === 'number') return val;
+                if (typeof val === 'string') {
+                    const cleaned = val.replace(/[$,₡]/g, '').replace(',', '.');
+                    return parseFloat(cleaned) || 0;
+                }
+                return 0;
+            };
             const formatUSD = (num) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
             const formatCRC = (num) => new Intl.NumberFormat('es-CR', { style: 'currency', currency: 'CRC' }).format(num);
+            const showLoader = (show) => loader.classList.toggle('hidden', !show);
 
-            async function fetchWithTimeout(url, options = {}, timeout = 8000) {
+            async function apiCall(endpoint, options = {}, timeout = 15000) {
                 const controller = new AbortController();
                 const id = setTimeout(() => controller.abort(), timeout);
+                
+                // ARCHITECTURAL FIX: Always add Content-Type header for requests with a body.
+                const newOptions = {
+                    ...options,
+                    headers: { 'Content-Type': 'application/json', ...options.headers },
+                    signal: controller.signal
+                };
+
                 try {
-                    const response = await fetch(url, { ...options, signal: controller.signal });
-                    return response;
+                    const response = await fetch(endpoint, newOptions);
+                    if (!response.ok) {
+                        const errorBody = await response.json().catch(() => ({ error: response.statusText }));
+                        throw new Error(errorBody.error || 'Respuesta no exitosa del servidor.');
+                    }
+                    return response.json();
                 } catch (error) {
-                    if (error.name === 'AbortError') throw new Error('Request timed out');
+                    if (error.name === 'AbortError') throw new Error('La petición tardó demasiado y fue cancelada.');
                     throw error;
                 } finally {
                     clearTimeout(id);
                 }
             }
-
+            
             async function fetchData() {
+                showLoader(true);
                 try {
-                    const response = await fetchWithTimeout('/.netlify/functions/get-data');
-                    if (!response.ok) throw new Error('Server response not OK');
-                    appState.data = await response.json();
+                    // Use GET method for fetching data, no body needed.
+                    appState.data = await apiCall('/.netlify/functions/get-data', { method: 'GET' });
                     return true;
                 } catch (error) {
-                    console.error("Fetch Error:", error.message);
+                    console.error("Error al obtener datos:", error.message);
+                    loginError.textContent = 'Fallo de conexión con la base de datos.';
+                    loginError.classList.remove('hidden');
                     return false;
+                } finally {
+                    showLoader(false);
                 }
             }
+
+            // =================================================================================
+            // APPLICATION LOGIC (LOGIN, NAVIGATION, RENDERING)
+            // =================================================================================
             
             function initializeApp() {
                 loginScreen.style.display = 'none';
                 appScreen.style.display = 'flex';
                 userDisplay.textContent = appState.currentUser.Usuario;
                 roleDisplay.textContent = `Rol: ${appState.currentUser.Rol}`;
-                const dataLoaded = appState.data.servicios && appState.data.servicios.length > 0;
-                if (dataLoaded) {
-                    populateFormDropdowns();
-                    renderCitasTable(appState.data.citas);
-                    document.querySelector('button[type="submit"]').disabled = false;
-                } else {
-                    if (appState.currentUser.Rol === 'Admin') {
-                        alert('ADVERTENCIA: No se pudo conectar con Google Sheets. La aplicación se ejecutará en modo offline.');
-                        citasTableBody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-500">Modo Offline: No se pudo cargar la información.</td></tr>`;
-                        document.querySelector('button[type="submit"]').disabled = true;
-                    }
-                }
+
+                populateFormDropdowns();
+                renderCitasTable(appState.data.citas);
+                
                 if (!appState.listenersAttached) {
                     setupAppEventListeners();
                     appState.listenersAttached = true;
@@ -482,37 +521,33 @@
                 const submitButton = loginForm.querySelector('button[type="submit"]');
                 submitButton.disabled = true;
                 submitButton.textContent = 'Verificando...';
-                try {
-                    const username = loginForm.username.value;
-                    const password = loginForm.password.value;
-                    const dataLoaded = await fetchData();
-                    if (username === 'admin' && password === 'admin') {
+                
+                const username = loginForm.username.value;
+                const password = loginForm.password.value;
+
+                if (username.toLowerCase() === 'admin' && password === 'Admin') {
+                    if (await fetchData()) {
                         appState.currentUser = { Usuario: 'Admin', Rol: 'Admin' };
                         initializeApp();
-                        return;
                     }
-                    if (!dataLoaded) {
-                        loginError.textContent = 'No se pudo conectar con la base de datos.';
-                        loginError.classList.remove('hidden');
-                        return;
+                } else {
+                    if (await fetchData()) {
+                        const foundUser = appState.data.usuarios.find(u => u.Usuario === username && u.Contraseña === password);
+                        if (foundUser) {
+                            appState.currentUser = foundUser;
+                            initializeApp();
+                        } else {
+                            loginError.textContent = 'Usuario o contraseña incorrectos.';
+                            loginError.classList.remove('hidden');
+                        }
                     }
-                    const foundUser = appState.data.usuarios.find(u => u.Usuario === username && u.Contraseña === password);
-                    if (foundUser) {
-                        appState.currentUser = foundUser;
-                        initializeApp();
-                    } else {
-                        loginError.textContent = 'Usuario o contraseña incorrectos.';
-                        loginError.classList.remove('hidden');
-                    }
-                } finally {
-                    submitButton.disabled = false;
-                    submitButton.textContent = 'Ingresar';
                 }
+                submitButton.disabled = false;
+                submitButton.textContent = 'Ingresar';
             };
 
             const handleLogout = () => {
-                appState.currentUser = null;
-                appState.data = { usuarios: [], servicios: [], medicos: [], metodosDePago: [], descuentos: [], citas: [] };
+                Object.assign(appState, { currentUser: null, data: {}, isEditing: false, isViewing: false });
                 appScreen.style.display = 'none';
                 loginScreen.style.display = 'flex';
                 loginForm.reset();
@@ -544,20 +579,6 @@
                 populate(formFields.metodoPago, appState.data.metodosDePago, p => p.Tipo, p => p.Tipo);
             }
 
-            function generateActionButtons(cita) {
-                const role = appState.currentUser.Rol;
-                let buttons = '';
-                const viewBtn = `<button data-id="${cita.ID}" class="view-btn text-green-600 hover:text-green-800" title="Ver"><span class="material-symbols-outlined">visibility</span></button>`;
-                const editBtn = `<button data-id="${cita.ID}" class="edit-btn text-blue-600 hover:text-blue-800" title="Editar"><span class="material-symbols-outlined">edit</span></button>`;
-                const deleteBtn = `<button data-id="${cita.ID}" class="delete-btn text-red-600 hover:text-red-800" title="Eliminar"><span class="material-symbols-outlined">delete</span></button>`;
-                switch (role) {
-                    case 'Examenes': buttons = viewBtn; break;
-                    case 'Imagenes': buttons = viewBtn + editBtn; break;
-                    case 'Admin': buttons = viewBtn + editBtn + deleteBtn; break;
-                }
-                return buttons;
-            }
-
             function renderCitasTable(citas) {
                 citasTableBody.innerHTML = '';
                 if (!citas || citas.length === 0) {
@@ -568,7 +589,7 @@
                     const row = document.createElement('tr');
                     row.className = 'hover:bg-slate-50';
                     const enviado = cita.Enviado && cita.Enviado.toLowerCase() === 'si';
-                    const montoFinal = parseCurrency(cita['Monto total Descontado con IVA']);
+                    const montoFinal = parseNumber(cita['Monto total Descontado con IVA']);
                     row.innerHTML = `
                         <td class="whitespace-nowrap py-4 px-3 text-sm font-medium text-slate-900">${cita.Nombre || ''}</td>
                         <td class="whitespace-nowrap py-4 px-3 text-sm text-slate-600">${cita['Fecha de Estudio'] || ''}</td>
@@ -580,20 +601,111 @@
                                 ${enviado ? 'check_circle' : 'hourglass_top'}
                             </span>
                         </td>
-                        <td class="py-4 px-3 text-center space-x-2">${generateActionButtons(cita)}</td>
+                        <td class="py-4 px-3 text-center space-x-2" data-id="${cita.ID}"></td>
                     `;
                     citasTableBody.appendChild(row);
                 });
+                applyRolePermissions();
             }
+
+            function applyRolePermissions() {
+                const role = appState.currentUser.Rol;
+                document.querySelectorAll('#citas-table-body td[data-id]').forEach(cell => {
+                    let buttons = '';
+                    const viewBtn = `<button data-action="view" class="view-btn text-green-600 hover:text-green-800" title="Ver"><span class="material-symbols-outlined">visibility</span></button>`;
+                    const editBtn = `<button data-action="edit" class="edit-btn text-blue-600 hover:text-blue-800" title="Editar"><span class="material-symbols-outlined">edit</span></button>`;
+                    const deleteBtn = `<button data-action="delete" class="delete-btn text-red-600 hover:text-red-800" title="Eliminar"><span class="material-symbols-outlined">delete</span></button>`;
+
+                    if (role === 'Examenes') buttons = viewBtn;
+                    if (role === 'Imagenes') buttons = viewBtn + editBtn;
+                    if (role === 'Admin') buttons = viewBtn + editBtn + deleteBtn;
+                    
+                    cell.innerHTML = buttons;
+                });
+            }
+            
+            // =================================================================================
+            // FORM LOGIC & CALCULATIONS
+            // =================================================================================
+
+            function calculateAll() {
+                const { montoTotal$, cobrar$, cobrarCRC } = getCalculatedData();
+                resumenFields.base.value = formatUSD(montoTotal$);
+                resumenFields.totalUsd.textContent = formatUSD(cobrar$);
+                resumenFields.totalCrc.textContent = formatCRC(cobrarCRC);
+            }
+
+            function getCalculatedData() {
+                const selectedService = appState.data.servicios.find(s => s['Producto o Servicio'] === formFields.tipoEstudio.value);
+                const selectedMetodoPago = appState.data.metodosDePago.find(mp => mp.Tipo === formFields.metodoPago.value);
+                const selectedMedicoReporta = appState.data.medicos.find(m => m.Medico === formFields.medicoReporta.value);
+                
+                const montoTotal$ = selectedService ? parseNumber(selectedService.Precio) : 0;
+                const descuento = parseNumber(formFields.descuento.value);
+                const tipoCambio = parseNumber(formFields.tipoCambio.value);
+                const ivaPercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.IVA) : 0;
+                const feePercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.Fees) : 0;
+                const porcentajeComision = selectedMedicoReporta ? parsePercent(selectedMedicoReporta.Comisión) : 0;
+                const tasaIVAMedico = 0.04;
+
+                // ARCHITECTURAL FIX: Aligning calculations with the technical report.
+                const montoTotalDescontado$ = montoTotal$ * (1 - descuento);
+                const iva$ = montoTotalDescontado$ * ivaPercent;
+                const montoTotalDescontadoIVA$ = montoTotalDescontado$ + iva$;
+                const fee$ = montoTotalDescontadoIVA$ * feePercent;
+                const cobrar$ = montoTotalDescontadoIVA$ + fee$;
+                const cobrarCRC = cobrar$ * tipoCambio;
+
+                let comision$ = 0;
+                if (selectedService && porcentajeComision > 0) {
+                    if (selectedService.Cobro === 'Especial') {
+                        const baseComision = parseNumber(selectedService['Base para comisión']);
+                        const montoPagar = parseNumber(selectedService['Moto a pagar']);
+                        if (montoTotal$ > 0) { // Avoid division by zero
+                            const parte1 = ((baseComision * (1 - descuento)) * (1 + tasaIVAMedico)) - ((baseComision / montoTotal$) * fee$);
+                            const parte2 = ((montoPagar * (1 - descuento)) * (1 + tasaIVAMedico)) - ((montoPagar / montoTotal$) * fee$);
+                            comision$ = (parte1 * porcentajeComision) + parte2;
+                        }
+                    } else { // Cobro Normal
+                        comision$ = (cobrar$ - fee$) * porcentajeComision;
+                    }
+                }
+                const comisionCRC = comision$ * tipoCambio;
+                const debitoFiscal = iva$;
+                const creditoFiscal = (comision$ / (1 + tasaIVAMedico)) * tasaIVAMedico;
+                const ivaPagadoHacienda = debitoFiscal - creditoFiscal;
+
+                return {
+                    'Monto Total': montoTotal$, Descuento: descuento, 'Monto Total Descontado': montoTotalDescontado$,
+                    IVA: iva$, Fee: fee$, 'Monto total Descontado con IVA': cobrar$, 'Tipo de cambio': tipoCambio,
+                    'Cobrar ₡': cobrarCRC, 'Cobrar $': cobrar$, 'Porcentaje de comisión': porcentajeComision,
+                    'Comisión en Colones': comisionCRC, 'Comisión en Dólares': comision$, 'Debito Fiscal': debitoFiscal,
+                    'Crédito Fiscal': creditoFiscal, 'IVA Pagado a Hacienda': ivaPagadoHacienda > 0 ? ivaPagadoHacienda : 0,
+                    montoTotal$, cobrar$, cobrarCRC // Return for display update
+                };
+            }
+            
+            // =================================================================================
+            // EVENT HANDLERS
+            // =================================================================================
 
             function setupAppEventListeners() {
                 logoutButton.addEventListener('click', handleLogout);
                 citaForm.addEventListener('submit', handleFormSubmit);
-                clearFormBtn.addEventListener('click', resetForm);
+                clearFormBtn.addEventListener('click', () => {
+                    if (appState.isViewing) {
+                        resetForm();
+                        showView('consultar');
+                    } else {
+                        resetForm();
+                    }
+                });
+
                 Object.values(nav).forEach(btn => btn.addEventListener('click', (e) => {
                     const view = e.currentTarget.id.includes('registrar') ? 'registrar' : 'consultar';
                     showView(view);
                 }));
+
                 formFields.especialidadContainer.addEventListener('click', (e) => {
                     const button = e.target.closest('button');
                     if (button && !button.classList.contains('active')) {
@@ -602,23 +714,83 @@
                         handleEspecialidadChange();
                     }
                 });
-                const calculationInputs = [formFields.tipoEstudio, formFields.descuento, formFields.metodoPago, formFields.tipoCambio];
+
+                const calculationInputs = [formFields.tipoEstudio, formFields.descuento, formFields.metodoPago, formFields.tipoCambio, formFields.medicoReporta];
                 calculationInputs.forEach(input => input.addEventListener('change', calculateAll));
+
                 citasTableBody.addEventListener('click', (e) => {
-                    const button = e.target.closest('button');
+                    const button = e.target.closest('button[data-action]');
                     if (!button) return;
-                    const citaId = button.dataset.id;
-                    if (button.classList.contains('view-btn')) handleViewClick(citaId);
-                    else if (button.classList.contains('edit-btn')) handleEditClick(citaId);
-                    else if (button.classList.contains('delete-btn')) handleDeleteClick(citaId);
+                    const cell = button.closest('td');
+                    const citaId = cell.dataset.id;
+                    const action = button.dataset.action;
+
+                    if (action === 'view') handleViewClick(citaId);
+                    if (action === 'edit') handleEditClick(citaId);
+                    if (action === 'delete') handleDeleteClick(citaId);
                 });
-                searchInput.addEventListener('keyup', () => {
+
+                searchInput.addEventListener('input', () => {
                     const searchTerm = searchInput.value.toLowerCase();
-                    const filteredCitas = appState.data.citas.filter(cita => 
+                    const filteredCitas = appState.data.citas.filter(cita =>
                         Object.values(cita).some(val => String(val).toLowerCase().includes(searchTerm))
                     );
                     renderCitasTable(filteredCitas);
                 });
+            }
+            
+            async function handleFormSubmit(event) {
+                event.preventDefault();
+                if (appState.isViewing) return;
+
+                const submitButton = citaForm.querySelector('button[type="submit"]');
+                submitButton.disabled = true;
+                showLoader(true);
+
+                try {
+                    const activeEspecialidadBtn = formFields.especialidadContainer.querySelector('.active');
+                    if (!activeEspecialidadBtn) {
+                        throw new Error('Por favor, seleccione un tipo de estudio.');
+                    }
+
+                    const calculatedData = getCalculatedData();
+                    const maxId = appState.data.citas.reduce((max, c) => Math.max(max, parseNumber(c.ID)), 0);
+                    
+                    const citaData = {
+                        ...calculatedData,
+                        // ARCHITECTURAL FIX: Send numeric ID, server handles conversion if needed.
+                        ID: appState.isEditing ? parseNumber(formFields.id.value) : maxId + 1,
+                        Enviado: formFields.enviado.checked ? 'Si' : 'No',
+                        'Fecha de Estudio': formFields.fechaEstudio.value,
+                        Nombre: formFields.nombre.value,
+                        Identificación: formFields.identificacion.value,
+                        Especialidad: activeEspecialidadBtn.dataset.studyType,
+                        'Tipo de Estudio': formFields.tipoEstudio.value,
+                        'Medico que Refiere': formFields.medicoRefiere.value,
+                        'Medico que Reporta': formFields.medicoReporta.value,
+                        'Descuento aplicado por': (calculatedData.Descuento > 0) ? appState.currentUser.Usuario : '',
+                    };
+                    
+                    // ARCHITECTURAL FIX: Payload now includes 'tipoEstudio' for backend routing.
+                    const payload = { ...citaData, tipoEstudio: citaData.Especialidad };
+                    const endpoint = appState.isEditing ? '/.netlify/functions/update-cita' : '/.netlify/functions/add-cita';
+                    const method = appState.isEditing ? 'PUT' : 'POST';
+
+                    await apiCall(endpoint, { method, body: JSON.stringify(payload) });
+
+                    await fetchData();
+                    renderCitasTable(appState.data.citas);
+                    resetForm();
+                    showView('consultar');
+                    alert(`Registro ${appState.isEditing ? 'actualizado' : 'guardado'} con éxito.`);
+
+                } catch (error) {
+                    console.error("Error al guardar:", error);
+                    alert(`No se pudo guardar el registro: ${error.message}`);
+                } finally {
+                    submitButton.disabled = false;
+                    showLoader(false);
+                }
             }
 
             function handleEspecialidadChange() {
@@ -629,37 +801,29 @@
                 formFields.tipoEstudio.innerHTML = `<option value="">Seleccione...</option>${options}`;
                 calculateAll();
             }
-            
-            function calculateAll() {
-                const selectedService = appState.data.servicios.find(s => s['Producto o Servicio'] === formFields.tipoEstudio.value);
-                const selectedMetodoPago = appState.data.metodosDePago.find(mp => mp.Tipo === formFields.metodoPago.value);
-                const montoTotal_J = selectedService ? parseCurrency(selectedService.Precio) : 0;
-                const descuento_K = parseFloat(formFields.descuento.value) || 0;
-                const tipoCambio_R = parseFloat(formFields.tipoCambio.value) || 520;
-                const montoTotalDescontado_M = montoTotal_J * (1 - descuento_K);
-                const ivaPercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.IVA) : 0;
-                const feePercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.Fees) : 0;
-                const iva_O = montoTotalDescontado_M * ivaPercent;
-                const montoTotalConIVA_Q = montoTotalDescontado_M + iva_O;
-                const fee_P = montoTotalConIVA_Q * feePercent;
-                const totalACobrar = montoTotalConIVA_Q + fee_P;
-                resumenFields.base.value = formatUSD(montoTotal_J);
-                resumenFields.totalUsd.textContent = formatUSD(totalACobrar);
-                resumenFields.totalCrc.textContent = formatCRC(totalACobrar * tipoCambio_R);
-            }
 
             function setFormState(disabled) {
+                appState.isViewing = disabled;
                 Object.values(formFields).forEach(field => {
-                    if (field.tagName === 'DIV') {
+                    if (field.id === 'especialidad') {
                         field.querySelectorAll('button').forEach(btn => btn.disabled = disabled);
                     } else {
                         field.disabled = disabled;
                     }
                 });
+                
                 citaForm.querySelector('button[type="submit"]').style.display = disabled ? 'none' : 'flex';
-                clearFormBtn.style.display = disabled ? 'flex' : 'flex';
+                clearFormBtn.disabled = false; // Always enabled to go back or clear.
+                
+                if (disabled) {
+                    clearFormBtn.querySelector('span').textContent = 'arrow_back';
+                    clearFormBtn.querySelector('span + span').textContent = 'Volver';
+                } else {
+                    clearFormBtn.querySelector('span').textContent = 'cleaning_services';
+                    clearFormBtn.querySelector('span + span').textContent = 'Limpiar';
+                }
             }
-
+            
             function resetForm() {
                 citaForm.reset();
                 formFields.id.value = '';
@@ -668,39 +832,42 @@
                 const today = new Date().toISOString().split('T')[0];
                 formFields.fechaEstudio.value = today;
                 formFields.registra.textContent = appState.currentUser.Usuario;
-                citaForm.querySelector('button[type="submit"]').textContent = 'Guardar';
+                citaForm.querySelector('button[type="submit"] span:last-child').textContent = 'Guardar';
                 setFormState(false);
+                formFields.especialidadContainer.querySelectorAll('button').forEach((btn, index) => btn.classList.toggle('active', index === 0));
                 handleEspecialidadChange();
             }
 
             function loadCitaIntoForm(citaId) {
-                const cita = appState.data.citas.find(c => c.ID === citaId);
+                // ARCHITECTURAL FIX: Comparing numbers to numbers.
+                const cita = appState.data.citas.find(c => parseNumber(c.ID) === parseNumber(citaId));
                 if (!cita) return;
+
                 formFields.id.value = cita.ID;
                 formFields.nombre.value = cita.Nombre;
                 formFields.identificacion.value = cita.Identificación;
-                const dateParts = cita['Fecha de Estudio'].split('/');
-                const isoDate = `${dateParts[2]}-${dateParts[1].padStart(2, '0')}-${dateParts[0].padStart(2, '0')}`;
-                formFields.fechaEstudio.value = isoDate;
+                formFields.fechaEstudio.value = cita['Fecha de Estudio'];
+                formFields.registra.textContent = cita['Descuento aplicado por'] || cita['Usuario que registra'] || 'N/A';
+                
                 formFields.especialidadContainer.querySelectorAll('button').forEach(btn => {
                     btn.classList.toggle('active', btn.dataset.studyType === cita.Especialidad);
                 });
+                
                 handleEspecialidadChange();
+                
                 setTimeout(() => {
                     formFields.tipoEstudio.value = cita['Tipo de Estudio'];
                     formFields.medicoRefiere.value = cita['Medico que Refiere'];
                     formFields.medicoReporta.value = cita['Medico que Reporta'];
                     formFields.descuento.value = parsePercent(cita.Descuento);
                     formFields.metodoPago.value = cita['Método pago'];
-                    formFields.tipoCambio.value = parseCurrency(cita['Tipo de cambio']);
+                    formFields.tipoCambio.value = parseNumber(cita['Tipo de cambio']);
                     formFields.enviado.checked = cita.Enviado && cita.Enviado.toLowerCase() === 'si';
                     calculateAll();
                 }, 100);
             }
 
             function handleViewClick(citaId) {
-                appState.isViewing = true;
-                appState.isEditing = false;
                 loadCitaIntoForm(citaId);
                 setFormState(true);
                 showView('registrar');
@@ -708,122 +875,43 @@
 
             function handleEditClick(citaId) {
                 appState.isEditing = true;
-                appState.isViewing = false;
                 loadCitaIntoForm(citaId);
                 setFormState(false);
-                citaForm.querySelector('button[type="submit"]').textContent = 'Actualizar';
+                citaForm.querySelector('button[type="submit"] span:last-child').textContent = 'Actualizar';
                 showView('registrar');
             }
-
+            
             async function handleDeleteClick(citaId) {
-                if (!confirm('¿Estás seguro de que deseas eliminar este registro?')) return;
-                const cita = appState.data.citas.find(c => c.ID === citaId);
+                if (!confirm(`¿Está seguro de que desea eliminar el registro ID: ${citaId}?`)) return;
+                const cita = appState.data.citas.find(c => parseNumber(c.ID) === parseNumber(citaId));
                 if (!cita) return;
+
                 showLoader(true);
                 try {
-                    const response = await fetchWithTimeout('/.netlify/functions/delete-cita', {
-                        method: 'DELETE',
-                        body: JSON.stringify({ ID: cita.ID, tipoEstudio: cita.Especialidad })
-                    });
-                    if (!response.ok) throw new Error('Error en el servidor al eliminar.');
+                    // ARCHITECTURAL FIX: Payload now includes numeric ID and tipoEstudio for routing.
+                    const payload = { ID: parseNumber(cita.ID), tipoEstudio: cita.Especialidad };
+                    await apiCall('/.netlify/functions/delete-cita', { method: 'DELETE', body: JSON.stringify(payload) });
+                    
                     await fetchData();
                     renderCitasTable(appState.data.citas);
                     alert('Registro eliminado con éxito.');
                 } catch (error) {
                     console.error('Delete Error:', error);
-                    alert('No se pudo eliminar el registro.');
+                    alert(`No se pudo eliminar el registro: ${error.message}`);
                 } finally {
                     showLoader(false);
                 }
             }
-            
-            async function handleFormSubmit(event) {
-                event.preventDefault();
-                if (appState.isViewing) return;
-                showLoader(true);
-                const selectedService = appState.data.servicios.find(s => s['Producto o Servicio'] === formFields.tipoEstudio.value);
-                const selectedMetodoPago = appState.data.metodosDePago.find(mp => mp.Tipo === formFields.metodoPago.value);
-                const selectedMedicoReporta = appState.data.medicos.find(m => m.Medico === formFields.medicoReporta.value);
-                const activeEspecialidad = formFields.especialidadContainer.querySelector('.active').dataset.studyType;
-                const montoTotal_J = selectedService ? parseCurrency(selectedService.Precio) : 0;
-                const descuento_K = parseFloat(formFields.descuento.value) || 0;
-                const tipoCambio_R = parseFloat(formFields.tipoCambio.value) || 520;
-                const montoTotalDescontado_M = montoTotal_J * (1 - descuento_K);
-                const ivaPercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.IVA) : 0;
-                const feePercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.Fees) : 0;
-                const iva_O = montoTotalDescontado_M * ivaPercent;
-                const montoTotalConIVA_Q = montoTotalDescontado_M + iva_O;
-                const fee_P = montoTotalConIVA_Q * feePercent;
-                const cobrarUSD_T = montoTotalConIVA_Q + fee_P;
-                const cobrarCRC_S = cobrarUSD_T * tipoCambio_R;
-                const porcentajeComision_U = selectedMedicoReporta ? parsePercent(selectedMedicoReporta.Comisión) : 0;
-                let comisionDolares_W = 0;
-                if (selectedService && porcentajeComision_U > 0) {
-                    if (selectedService.Cobro === 'Normal') {
-                        comisionDolares_W = (montoTotalDescontado_M - fee_P) * porcentajeComision_U;
-                    } else {
-                         const baseComision_BC = parseCurrency(selectedService['Base para comisión']);
-                         const montoPagar_MP = parseCurrency(selectedService['Moto a pagar']);
-                         const parte1 = (baseComision_BC * (1-descuento_K)) - ((baseComision_BC / montoTotal_J) * fee_P);
-                         const parte2 = (montoPagar_MP * (1-descuento_K)) - ((montoPagar_MP / montoTotal_J) * fee_P);
-                         comisionDolares_W = (parte1 * porcentajeComision_U) + parte2;
-                    }
-                }
-                const comisionColones_V = comisionDolares_W * tipoCambio_R;
-                const debitoFiscal_X = iva_O;
-                const creditoFiscal_Y = fee_P;
-                const ivaPagadoHacienda_Z = debitoFiscal_X - creditoFiscal_Y;
-                const dateParts = formFields.fechaEstudio.value.split('-');
-                const formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
-                const citaData = {
-                    ID: formFields.id.value || Math.floor(100000 + Math.random() * 900000).toString(),
-                    Enviado: formFields.enviado.checked ? 'Si' : 'No',
-                    'Fecha de Estudio': formattedDate,
-                    Nombre: formFields.nombre.value,
-                    Identificación: formFields.identificacion.value,
-                    Especialidad: activeEspecialidad,
-                    'Tipo de Estudio': formFields.tipoEstudio.value,
-                    'Medico que Refiere': formFields.medicoRefiere.value,
-                    'Medico que Reporta': formFields.medicoReporta.value,
-                    'Monto Total': formatNumberForSheet(montoTotal_J),
-                    Descuento: `${descuento_K * 100}%`,
-                    'Descuento aplicado por': appState.currentUser.Usuario,
-                    'Monto Total Descontado': formatNumberForSheet(montoTotalDescontado_M),
-                    'Método pago': formFields.metodoPago.value,
-                    IVA: formatNumberForSheet(iva_O),
-                    Fee: formatNumberForSheet(fee_P),
-                    'Monto total Descontado con IVA': formatNumberForSheet(cobrarUSD_T),
-                    'Tipo de cambio': tipoCambio_R,
-                    'Cobrar ₡': formatNumberForSheet(cobrarCRC_S),
-                    'Cobrar $': formatNumberForSheet(cobrarUSD_T),
-                    'Porcentaje de comisión': `${porcentajeComision_U * 100}%`,
-                    'Comisión en Colones': formatNumberForSheet(comisionColones_V),
-                    'Comisión en Dólares': formatNumberForSheet(comisionDolares_W),
-                    'Debito Fiscal': formatNumberForSheet(debitoFiscal_X),
-                    'Crédito Fiscal': formatNumberForSheet(creditoFiscal_Y),
-                    'IVA Pagado a Hacienda': formatNumberForSheet(ivaPagadoHacienda_Z > 0 ? ivaPagadoHacienda_Z : 0),
-                };
-                const endpoint = appState.isEditing ? '/.netlify/functions/update-cita' : '/.netlify/functions/add-cita';
-                const method = appState.isEditing ? 'PUT' : 'POST';
-                const payload = { ...citaData, tipoEstudio: citaData.Especialidad };
-                try {
-                    const response = await fetchWithTimeout(endpoint, { method: method, body: JSON.stringify(payload) });
-                    if (!response.ok) throw new Error(`Error en el servidor: ${await response.text()}`);
-                    await fetchData();
-                    renderCitasTable(appState.data.citas);
-                    resetForm();
-                    alert(`Registro ${appState.isEditing ? 'actualizado' : 'guardado'} con éxito.`);
-                } catch (error) {
-                    console.error("Submit Error:", error);
-                    alert('No se pudo guardar el registro.');
-                } finally {
-                    showLoader(false);
-                }
-            }
+
+            // =================================================================================
+            // APP INITIALIZATION
+            // =================================================================================
             loginForm.addEventListener('submit', handleLogin);
         });
     </script>
 </body>
 </html>
+
+
 
 
