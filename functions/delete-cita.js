@@ -1,6 +1,7 @@
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 
+// Helper function to connect to the Google Sheet document
 async function getDoc() {
     const auth = new JWT({
         email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -14,30 +15,24 @@ async function getDoc() {
 
 exports.handler = async function(event, context) {
     if (event.httpMethod !== 'DELETE') {
-        return { statusCode: 405, body: 'Method Not Allowed' };
+        return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
     }
 
     try {
         const doc = await getDoc();
         const { ID, tipoEstudio } = JSON.parse(event.body);
 
-        let sheet;
-        switch (tipoEstudio) {
-            case 'RX':
-                sheet = doc.sheetsByTitle['RX'];
-                break;
-            case 'DMO':
-                sheet = doc.sheetsByTitle['DMO'];
-                break;
-            case 'MMG':
-                sheet = doc.sheetsByTitle['MMG'];
-                break;
-            default:
-                return { statusCode: 400, body: JSON.stringify({ error: 'Tipo de estudio no válido.' }) };
+        const sheet = doc.sheetsByTitle[tipoEstudio];
+        
+        if (!sheet) {
+            return { statusCode: 400, body: JSON.stringify({ error: 'Tipo de estudio no válido o hoja no encontrada.' }) };
         }
 
         const rows = await sheet.getRows();
-        const rowToDelete = rows.find(row => row.ID === ID);
+
+        // ARCHITECTURAL FIX: Compare IDs as strings to prevent type mismatches.
+        // This ensures the correct row is found for deletion.
+        const rowToDelete = rows.find(row => String(row.get('ID')) === String(ID));
 
         if (rowToDelete) {
             await rowToDelete.delete();
@@ -47,6 +42,6 @@ exports.handler = async function(event, context) {
         }
     } catch (error) {
         console.error('Error al eliminar registro:', error);
-        return { statusCode: 500, body: JSON.stringify({ error: 'Error al eliminar registro.' }) };
+        return { statusCode: 500, body: JSON.stringify({ error: 'Error interno del servidor al eliminar registro.' }) };
     }
 };
