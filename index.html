@@ -786,9 +786,15 @@
                     const calculatedData = getCalculatedData();
                     const maxId = appState.data.citas.reduce((max, c) => Math.max(max, parseNumber(c.ID)), 0);
                     
+                    // ARCHITECTURAL FIX (v1.4): Se captura el texto del descuento (ej: "10%")
+                    // en lugar de su valor numérico (ej: 0.1) para mantener la consistencia de los datos.
+                    const selectedDiscountOption = formFields.descuento.options[formFields.descuento.selectedIndex];
+                    const discountText = selectedDiscountOption.value > 0 ? selectedDiscountOption.text : '0%';
+
                     const citaData = {
                         ...calculatedData,
                         ID: appState.isEditing ? parseNumber(formFields.id.value) : maxId + 1,
+                        Descuento: discountText, // <-- CORRECCIÓN APLICADA AQUÍ
                         Enviado: formFields.enviado.checked ? 'Si' : 'No',
                         'Fecha de Estudio': formFields.fechaEstudio.value,
                         Nombre: formFields.nombre.value,
@@ -938,7 +944,6 @@
     </script>
 </body>
 </html>
-
 
 
 
