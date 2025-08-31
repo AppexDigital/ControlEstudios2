@@ -531,7 +531,6 @@
                 const username = loginForm.username.value;
                 const password = loginForm.password.value;
 
-                // ARCHITECTURAL FIX (v10.7): Make hardcoded user login case-insensitive and truly offline first.
                 if (username.toLowerCase() === 'admin' && password.toLowerCase() === 'admin') { 
                     appState.currentUser = { Usuario: 'Admin', Rol: 'Admin' };
                     
@@ -872,8 +871,8 @@
                     formFields.tipoEstudio.value = cita['Tipo de Estudio'];
                     formFields.medicoRefiere.value = cita['Medico que Refiere'];
                     formFields.medicoReporta.value = cita['Medico que Reporta'];
-                    // ARCHITECTURAL FIX (v10.7): Use parseNumber on discount from sheet as it's a decimal.
-                    formFields.descuento.value = parseNumber(cita.Descuento);
+                    // ARCHITECTURAL FIX (v10.8): Use parsePercent for discount value when it's a percentage string from the sheet.
+                    formFields.descuento.value = parsePercent(cita.Descuento);
                     formFields.metodoPago.value = cita['Método pago'];
                     formFields.tipoCambio.value = parseNumber(cita['Tipo de cambio']);
                     formFields.enviado.checked = cita.Enviado && cita.Enviado.toLowerCase() === 'si';
@@ -924,3 +923,4 @@
     </script>
 </body>
 </html>
+
