@@ -187,8 +187,8 @@
             try {
                 const response = await fetch(endpoint, { ...options, signal: controller.signal });
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || `Server error: ${response.status}`);
+                    const errorText = await response.text();
+                    throw new Error(`Server error: ${response.status} ${errorText}`);
                 }
                 return response.json();
             } catch (error) {
@@ -302,7 +302,7 @@
             citasTableBody.innerHTML = '';
              (citas || []).forEach(cita => {
                 const row = document.createElement('tr');
-                // AJUSTE: Se utiliza 'Monto total Descontado con IVA' para la columna de monto.
+                // AJUSTE REALIZADO AQUÍ: Se utiliza 'Monto total Descontado con IVA' para la columna de monto.
                 const montoFinal = parseCurrency(cita['Monto total Descontado con IVA']);
                 row.innerHTML = `
                     <td class="py-4 px-3">${cita.Nombre}</td>
@@ -315,9 +315,6 @@
         }
 
         function setupAppEventListeners() {
-            // CORRECCIÓN: Se asegura que los listeners se configuren una sola vez.
-            if (appEventListenersAttached) return;
-
             logoutButton.addEventListener('click', handleLogout);
             citaForm.addEventListener('submit', handleFormSubmit);
             clearFormBtn.addEventListener('click', resetForm);
@@ -343,7 +340,6 @@
                 const filtered = (appState.data.citas || []).filter(c => Object.values(c).some(v => String(v).toLowerCase().includes(term)));
                 renderCitasTable(filtered);
             });
-            appEventListenersAttached = true;
         }
 
         function handleEspecialidadChange() {
@@ -525,3 +521,5 @@
     </script>
 </body>
 </html>
+
+
