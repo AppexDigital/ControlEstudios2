@@ -1,6 +1,7 @@
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 
+// Helper function to connect to the Google Sheet document
 async function getDoc() {
     const auth = new JWT({
         email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -13,39 +14,44 @@ async function getDoc() {
 }
 
 exports.handler = async function(event, context) {
+    if (event.httpMethod !== 'PUT') {
+        return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
+    }
+
     try {
         const doc = await getDoc();
+        const updatedCita = JSON.parse(event.body);
 
-        const usuariosSheet = doc.sheetsByTitle['Usuarios'];
-        const serviciosSheet = doc.sheetsByTitle['Servicios'];
-        const medicosSheet = doc.sheetsByTitle['Medicos'];
-        const metodosDePagoSheet = doc.sheetsByTitle['Metodo de Pago'];
-        const descuentosSheet = doc.sheetsByTitle['Descuentos'];
-        const rxSheet = doc.sheetsByTitle['RX'];
-        const dmoSheet = doc.sheetsByTitle['DMO'];
-        const mmgSheet = doc.sheetsByTitle['MMG'];
+        const sheet = doc.sheetsByTitle[updatedCita.tipoEstudio];
 
-        const usuariosRows = await usuariosSheet.getRows();
-        const serviciosRows = await serviciosSheet.getRows();
-        const medicosRows = await medicosSheet.getRows();
-        const metodosDePagoRows = await metodosDePagoSheet.getRows();
-        const descuentosRows = await descuentosSheet.getRows();
-        const rxRows = await rxSheet.getRows();
-        const dmoRows = await dmoSheet.getRows();
-        const mmgRows = await mmgSheet.getRows();
+        if (!sheet) {
+            return { statusCode: 400, body: JSON.stringify({ error: 'Tipo de estudio no válido o hoja no encontrada.' }) };
+        }
+        
+        // This field is for routing only and is not a column in the sheet.
+        delete updatedCita.tipoEstudio;
 
-        const data = {
-            usuarios: usuariosRows.map(row => row.toObject()),
-            servicios: serviciosRows.map(row => row.toObject()),
-            medicos: medicosRows.map(row => row.toObject()),
-            metodosDePago: metodosDePagoRows.map(row => row.toObject()),
-            descuentos: descuentosRows.map(row => row.toObject()),
-            citas: [...rxRows.map(row => row.toObject()), ...dmoRows.map(row => row.toObject()), ...mmgRows.map(row => row.toObject())]
-        };
+        const rows = await sheet.getRows();
+        
+        // ARCHITECTURAL FIX: Compare IDs as strings to prevent type mismatches (e.g., "101" vs 101).
+        // This makes the backend robust regardless of how the frontend sends the ID.
+        const rowToUpdate = rows.find(row => String(row.get('ID')) === String(updatedCita.ID));
 
-        return { statusCode: 200, body: JSON.stringify(data) };
+        if (rowToUpdate) {
+            // Use .set() to update values, which is the correct method for v4 of the library.
+            Object.keys(updatedCita).forEach(key => {
+                if (sheet.headerValues.includes(key)) {
+                    rowToUpdate.set(key, updatedCita[key]);
+                }
+            });
+            await rowToUpdate.save({ raw: true }); // Save changes to the sheet.
+            return { statusCode: 200, body: JSON.stringify({ message: 'Cita actualizada con éxito!' }) };
+        } else {
+            return { statusCode: 404, body: JSON.stringify({ error: 'No se encontró la cita para actualizar.' }) };
+        }
     } catch (error) {
-        console.error('Error al obtener los datos:', error);
-        return { statusCode: 500, body: JSON.stringify({ error: 'Error al obtener los datos.' }) };
+        console.error('Error al actualizar la cita:', error);
+        return { statusCode: 500, body: JSON.stringify({ error: 'Error interno del servidor al actualizar la cita.' }) };
     }
 };
+
