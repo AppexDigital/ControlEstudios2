@@ -302,7 +302,6 @@
             citasTableBody.innerHTML = '';
              (citas || []).forEach(cita => {
                 const row = document.createElement('tr');
-                // AJUSTE REALIZADO AQUÍ: Se utiliza 'Monto total Descontado con IVA' para la columna de monto.
                 const montoFinal = parseCurrency(cita['Monto total Descontado con IVA']);
                 row.innerHTML = `
                     <td class="py-4 px-3">${cita.Nombre}</td>
@@ -454,8 +453,8 @@
             const montoDescontado = montoTotal * (1 - descuento);
             const iva = montoDescontado * ivaPercent;
             const montoConIva = montoDescontado + iva;
-            const fee = montoConIva * feePercent; 
-            const cobrarTotal = montoConIva;
+            const fee = montoConIva * feePercent; // El fee se calcula sobre el monto con IVA
+            const cobrarTotal = montoConIva; // El cliente no paga el fee, este se deduce de la ganancia
             
             let comision = 0;
             if (service && comisionPercent > 0) {
@@ -502,7 +501,7 @@
                 'Crédito Fiscal': formatNumberForSheet(creditoFiscal),
                 'IVA Pagado a Hacienda': formatNumberForSheet(debitoFiscal - creditoFiscal)
             };
-
+            
             const endpoint = appState.isEditing ? '/.netlify/functions/update-cita' : '/.netlify/functions/add-cita';
             const method = appState.isEditing ? 'PUT' : 'POST';
             
