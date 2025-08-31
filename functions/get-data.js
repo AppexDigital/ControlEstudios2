@@ -1,7 +1,6 @@
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 
-// Helper function to connect to the Google Sheet document
 async function getDoc() {
     const auth = new JWT({
         email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -14,44 +13,34 @@ async function getDoc() {
 }
 
 exports.handler = async function(event, context) {
-    if (event.httpMethod !== 'PUT') {
-        return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
-    }
-
     try {
         const doc = await getDoc();
-        const updatedCita = JSON.parse(event.body);
-
-        const sheet = doc.sheetsByTitle[updatedCita.tipoEstudio];
-
-        if (!sheet) {
-            return { statusCode: 400, body: JSON.stringify({ error: 'Tipo de estudio no válido o hoja no encontrada.' }) };
-        }
         
-        // This field is for routing only and is not a column in the sheet.
-        delete updatedCita.tipoEstudio;
-
-        const rows = await sheet.getRows();
+        // Nombres de todas las hojas que necesitamos.
+        const sheetTitles = ['Usuarios', 'Servicios', 'Medicos', 'Metodo de Pago', 'Descuentos', 'RX', 'DMO', 'MMG'];
         
-        // ARCHITECTURAL FIX: Compare IDs as strings to prevent type mismatches (e.g., "101" vs 101).
-        // This makes the backend robust regardless of how the frontend sends the ID.
-        const rowToUpdate = rows.find(row => String(row.get('ID')) === String(updatedCita.ID));
+        // Petición en paralelo para máxima eficiencia.
+        const sheetPromises = sheetTitles.map(async (title) => {
+            const sheet = doc.sheetsByTitle[title];
+            if (!sheet) return []; // Si una hoja no existe, devuelve un array vacío.
+            const rows = await sheet.getRows();
+            return rows.map(row => row.toObject());
+        });
 
-        if (rowToUpdate) {
-            // Use .set() to update values, which is the correct method for v4 of the library.
-            Object.keys(updatedCita).forEach(key => {
-                if (sheet.headerValues.includes(key)) {
-                    rowToUpdate.set(key, updatedCita[key]);
-                }
-            });
-            await rowToUpdate.save({ raw: true }); // Save changes to the sheet.
-            return { statusCode: 200, body: JSON.stringify({ message: 'Cita actualizada con éxito!' }) };
-        } else {
-            return { statusCode: 404, body: JSON.stringify({ error: 'No se encontró la cita para actualizar.' }) };
-        }
+        const [usuarios, servicios, medicos, metodosDePago, descuentos, rx, dmo, mmg] = await Promise.all(sheetPromises);
+
+        // Combinar y ordenar los registros de citas.
+        const citas = [
+            ...rx,
+            ...dmo,
+            ...mmg
+        ].sort((a, b) => parseInt(b.ID) - parseInt(a.ID)); // Ordenar por ID descendente.
+
+        const data = { usuarios, servicios, medicos, metodosDePago, descuentos, citas };
+
+        return { statusCode: 200, body: JSON.stringify(data) };
     } catch (error) {
-        console.error('Error al actualizar la cita:', error);
-        return { statusCode: 500, body: JSON.stringify({ error: 'Error interno del servidor al actualizar la cita.' }) };
+        console.error('Error al obtener los datos:', error);
+        return { statusCode: 500, body: JSON.stringify({ error: 'Error interno del servidor al obtener datos.' }) };
     }
 };
-
