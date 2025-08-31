@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -5,99 +6,290 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Exámenes - Control de Estudios</title>
     
-    <!-- Dependencias y Fuentes -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Google Material Symbols (Icons) -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
 
-    <!-- Estilos CSS -->
     <style>
         :root {
-            --color-primary: #1e3a8a; --color-secondary: #0d9488; --color-accent: #14b8a6;
-            --color-background: #f8fafc; --color-card: #ffffff; --color-text-primary: #1e293b;
-            --color-text-secondary: #64748b; --color-border: #e2e8f0;
+            --color-primary: #1e3a8a;      /* Azul oscuro (Blue-900) */
+            --color-secondary: #0d9488;   /* Turquesa (Teal-600) */
+            --color-accent: #14b8a6;      /* Turquesa más claro (Teal-500) */
+            --color-background: #f8fafc;  /* Fondo principal (Slate-50) */
+            --color-card: #ffffff;        /* Fondo de tarjetas */
+            --color-text-primary: #1e293b; /* Texto principal (Slate-800) */
+            --color-text-secondary: #64748b;/* Texto secundario (Slate-500) */
+            --color-border: #e2e8f0;      /* Bordes sutiles (Slate-200) */
         }
-        html, body { height: 100%; }
-        body { font-family: 'Inter', sans-serif; background-color: var(--color-background); color: var(--color-text-primary); }
-        .login-background { background: linear-gradient(135deg, var(--color-primary) 0%, #2b4f9a 100%); }
-        .btn-primary { background: linear-gradient(to right, var(--color-secondary), var(--color-accent)); }
-        .btn-primary:disabled { background: #9ca3af; cursor: not-allowed; }
-        .nav-btn.active { border-bottom-color: var(--color-accent); }
-        .input-field:focus { border-color: var(--color-secondary); box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.1); }
-        .input-field:disabled { background-color: #e2e8f0; cursor: not-allowed; }
-        .study-type-btn.active { background-color: var(--color-primary); color: white; border-color: var(--color-primary); }
-        .total-amount { font-size: clamp(1.5rem, 5vw, 2.25rem); }
-        .readonly-field { background-color: #e2e8f0; cursor: not-allowed; }
+        html, body {
+            height: 100%;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--color-background);
+            color: var(--color-text-primary);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .login-background {
+             background: linear-gradient(135deg, var(--color-primary) 0%, #2b4f9a 100%);
+        }
+        .login-card {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .btn-primary {
+            background: linear-gradient(to right, var(--color-secondary), var(--color-accent));
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px -5px rgba(13, 148, 136, 0.6);
+        }
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px -8px rgba(13, 148, 136, 0.8);
+        }
+        .btn-primary:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .btn-secondary {
+            background-color: #e2e8f0;
+            color: #475569;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-secondary:hover {
+            background-color: #cbd5e1;
+        }
+        .nav-btn {
+            transition: all 0.3s ease;
+            border-bottom: 4px solid transparent;
+            color: rgba(255, 255, 255, 0.7);
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+        }
+        .nav-btn:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+        .nav-btn.active {
+            color: white;
+            font-weight: 700;
+            border-bottom-color: var(--color-accent);
+        }
+        .input-field {
+            background-color: #f1f5f9; /* Slate-100 */
+            border: 2px solid transparent;
+            color: var(--color-text-primary);
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+        .input-field:focus {
+            outline: none;
+            background-color: var(--color-card);
+            border-color: var(--color-secondary);
+            box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.1);
+        }
+        .input-field:disabled {
+            background-color: #e2e8f0;
+            cursor: not-allowed;
+            color: #64748b;
+        }
+        .readonly-field {
+            background-color: #e2e8f0; /* Slate-200 */
+            cursor: not-allowed;
+            font-weight: 700;
+        }
+        .study-type-btn {
+            transition: all 0.2s ease;
+            border: 2px solid var(--color-border);
+            color: var(--color-text-secondary);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .study-type-btn.active {
+            background-color: var(--color-primary);
+            color: white;
+            border-color: var(--color-primary);
+            box-shadow: 0 4px 12px -4px rgba(30, 58, 138, 0.5);
+            transform: translateY(-2px);
+        }
+        .form-section-title {
+            font-size: 1.125rem; /* text-lg */
+            font-weight: 700;
+            color: var(--color-primary);
+            border-bottom: 2px solid var(--color-border);
+            padding-bottom: 0.75rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .label {
+            font-weight: 600;
+            color: var(--color-text-primary);
+            font-size: 0.875rem; /* text-sm */
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        .total-amount {
+            font-size: clamp(1.5rem, 5vw, 2.25rem);
+        }
     </style>
 </head>
 <body>
-    <!-- Pantalla de Login -->
+    <!-- 1. Pantalla de Login -->
     <div id="login-screen" class="flex items-center justify-center h-full login-background p-4">
-        <div class="w-full max-w-md p-10 space-y-8 bg-white rounded-2xl shadow-2xl">
+        <div class="w-full max-w-md p-10 space-y-8 bg-white rounded-2xl login-card">
             <div class="text-center">
                 <h1 class="text-4xl font-extrabold" style="color:var(--color-primary)">Control<span style="color:var(--color-secondary)">Estudios</span></h1>
                 <p class="text-color-text-secondary mt-2">Plataforma de Gestión de Exámenes</p>
             </div>
             <form id="login-form" class="space-y-6">
-                <input id="username" name="username" type="text" required class="input-field w-full" placeholder="Usuario">
-                <input id="password" name="password" type="password" required class="input-field w-full" placeholder="Contraseña">
-                <p id="login-error" class="text-red-500 text-sm text-center hidden"></p>
-                <button type="submit" class="w-full btn-primary py-3 rounded-lg text-lg">Ingresar</button>
+                <div>
+                    <label for="username" class="sr-only">Usuario</label>
+                    <input id="username" name="username" type="text" required class="input-field w-full" placeholder="Usuario">
+                </div>
+                <div>
+                    <label for="password" class="sr-only">Contraseña</label>
+                    <input id="password" name="password" type="password" required class="input-field w-full" placeholder="Contraseña">
+                </div>
+                <p id="login-error" class="text-red-500 text-sm text-center hidden">Usuario o contraseña incorrectos.</p>
+                <button type="submit" class="w-full btn-primary py-3 rounded-lg text-lg">
+                    Ingresar
+                </button>
             </form>
         </div>
     </div>
 
-    <!-- Aplicación Principal -->
+    <!-- 2. Aplicación Principal -->
     <div id="app-screen" class="hidden h-full flex flex-col">
+        <!-- Barra de Navegación -->
         <nav class="w-full flex-shrink-0 z-10 shadow-lg" style="background-color: var(--color-primary);">
             <div class="mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-20">
-                    <h1 class="text-3xl font-extrabold text-white">Control<span style="color: var(--color-accent);">Estudios</span></h1>
+                    <div class="flex items-center gap-3">
+                        <h1 class="text-3xl font-extrabold text-white">Control<span style="color: var(--color-accent);">Estudios</span></h1>
+                    </div>
                     <div class="hidden sm:flex items-center gap-2">
-                        <button id="nav-registrar" class="nav-btn active flex items-center text-base px-4 rounded-md"><span class="material-symbols-outlined">edit_document</span><span class="hidden lg:inline ml-2">Registrar</span></button>
-                        <button id="nav-consultar" class="nav-btn flex items-center text-base px-4 rounded-md"><span class="material-symbols-outlined">manage_search</span><span class="hidden lg:inline ml-2">Consultar</span></button>
+                        <button id="nav-registrar" title="Registrar Exámen" class="nav-btn active flex items-center text-base px-3 lg:px-4 rounded-md">
+                            <span class="material-symbols-outlined">edit_document</span>
+                            <span class="hidden lg:inline ml-2">Registrar Exámen</span>
+                        </button>
+                        <button id="nav-consultar" title="Consultar Exámenes" class="nav-btn flex items-center text-base px-3 lg:px-4 rounded-md">
+                            <span class="material-symbols-outlined">manage_search</span>
+                            <span class="hidden lg:inline ml-2">Consultar Exámenes</span>
+                        </button>
                     </div>
                     <div class="flex items-center gap-4">
                         <div class="text-right hidden sm:block">
-                            <span id="user-display" class="text-base font-semibold text-white"></span>
-                            <p id="role-display" class="text-xs text-gray-300 font-medium"></p>
+                            <span class="text-base font-semibold text-white" id="user-display"></span>
+                            <p class="text-xs text-gray-300 font-medium" id="role-display"></p>
                         </div>
-                        <button id="logout-button" class="text-gray-300 hover:text-white" title="Cerrar Sesión"><span class="material-symbols-outlined text-3xl">logout</span></button>
+                        <button id="logout-button" class="text-gray-300 hover:text-white transition-colors" title="Cerrar Sesión">
+                            <span class="material-symbols-outlined text-3xl">logout</span>
+                        </button>
                     </div>
                 </div>
             </div>
         </nav>
+
+        <!-- Contenido Principal -->
         <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-            <div id="registrar-view">
-                <form id="cita-form" class="bg-card p-8 rounded-2xl shadow-xl border w-full">
+            <!-- Vista de Registro de Exámen -->
+            <div id="registrar-view" class="min-h-full">
+                <form id="cita-form" class="bg-color-card p-6 sm:p-8 rounded-2xl shadow-xl border border-color-border w-full max-w-full pb-24 md:pb-8">
                     <input type="hidden" id="cita-id">
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        <div class="space-y-6">
-                            <h3 class="text-lg font-bold border-b pb-2">Paciente</h3>
-                            <input id="nombre" type="text" placeholder="Nombre Paciente" class="input-field w-full" required>
-                            <input id="identificacion" type="text" placeholder="Cédula" class="input-field w-full" required>
-                            <div id="especialidad" class="grid grid-cols-3 gap-2">
-                                <button type="button" data-study-type="RX" class="study-type-btn p-3 rounded-lg active">RX</button>
-                                <button type="button" data-study-type="DMO" class="study-type-btn p-3 rounded-lg">DMO</button>
-                                <button type="button" data-study-type="MMG" class="study-type-btn p-3 rounded-lg">MMG</button>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-x-8 gap-y-6">
+                        
+                        <!-- Columna 1 -->
+                        <div class="space-y-6 flex flex-col">
+                            <h3 class="form-section-title"><span class="material-symbols-outlined">person</span>Información del Paciente</h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="label" for="nombre">Nombre Paciente</label>
+                                    <input id="nombre" type="text" class="input-field w-full" required>
+                                </div>
+                                <div>
+                                    <label class="label" for="identificacion">Cédula</label>
+                                    <input id="identificacion" type="text" class="input-field w-full" required>
+                                </div>
                             </div>
-                            <select id="tipo-estudio" class="input-field w-full" required></select>
+                            <div>
+                                <label class="label">Tipo de Estudio</label>
+                                <div id="especialidad" class="grid grid-cols-3 gap-2">
+                                    <button type="button" data-study-type="RX" class="study-type-btn p-3 rounded-lg text-base active"><span class="material-symbols-outlined">camera_enhance</span>RX</button>
+                                    <button type="button" data-study-type="DMO" class="study-type-btn p-3 rounded-lg text-base"><span class="material-symbols-outlined">analytics</span>DMO</button>
+                                    <button type="button" data-study-type="MMG" class="study-type-btn p-3 rounded-lg text-base"><span class="material-symbols-outlined">image_search</span>MMG</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="label" for="tipo-estudio">Servicio Específico</label>
+                                <select id="tipo-estudio" class="input-field w-full" required></select>
+                            </div>
                         </div>
-                        <div class="space-y-6">
-                             <h3 class="text-lg font-bold border-b pb-2">Detalles</h3>
-                             <select id="medico-refiere" class="input-field w-full" required></select>
-                             <select id="medico-reporta" class="input-field w-full" required></select>
-                             <select id="metodo-pago" class="input-field w-full" required></select>
-                             <select id="descuento" class="input-field w-full"></select>
+                        
+                        <!-- Columna 2 -->
+                        <div class="space-y-6 flex flex-col">
+                             <h3 class="form-section-title"><span class="material-symbols-outlined">medical_information</span>Detalles del Exámen</h3>
+                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="label" for="medico-refiere">Doctor Refiere</label>
+                                    <select id="medico-refiere" class="input-field w-full" required></select>
+                                </div>
+                                <div>
+                                    <label class="label" for="medico-reporta">Doctor Reporta</label>
+                                    <select id="medico-reporta" class="input-field w-full" required></select>
+                                </div>
+                                <div>
+                                    <label class="label" for="metodo-pago">Método de Pago</label>
+                                    <select id="metodo-pago" class="input-field w-full" required></select>
+                                </div>
+                                 <div>
+                                    <label class="label" for="descuento">Descuento</label>
+                                    <select id="descuento" class="input-field w-full"></select>
+                                </div>
+                            </div>
+                            <div class="bg-slate-50 p-3 rounded-lg border border-color-border space-y-2 text-sm mt-auto">
+                                <div class="flex justify-between items-center">
+                                    <label class="label" for="fecha-estudio">Fecha Estudio:</label>
+                                    <input type="date" id="fecha-estudio" class="input-field text-base text-right w-48">
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <label class="font-semibold text-color-text-secondary">Registra:</label>
+                                    <span id="registro-field" class="font-bold text-color-text-primary text-base"></span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="space-y-6">
-                            <h3 class="text-lg font-bold border-b pb-2">Pago</h3>
-                            <div class="bg-slate-100 p-4 rounded-xl border-2 space-y-4">
+
+                        <!-- Columna 3 -->
+                        <div class="space-y-6 flex flex-col">
+                            <h3 class="form-section-title"><span class="material-symbols-outlined">receipt_long</span>Resumen de Pago</h3>
+                            <div class="bg-slate-100 p-4 rounded-xl border-2 border-slate-200 space-y-4 flex flex-col flex-grow justify-center">
                                 <div class="grid grid-cols-2 gap-4">
-                                    <input id="resumen-base" type="text" class="input-field readonly-field text-center" readonly placeholder="$0.00">
-                                    <input id="tipo-cambio" type="number" value="520" class="input-field text-center">
+                                    <div>
+                                        <label class="label">Precio Base (USD)</label>
+                                        <input id="resumen-base" type="text" class="input-field w-full readonly-field text-center" readonly placeholder="$0.00">
+                                    </div>
+                                    <div>
+                                        <label class="label" for="tipo-cambio">Tipo de Cambio</label>
+                                        <input id="tipo-cambio" type="number" value="520" class="input-field w-full text-center">
+                                    </div>
                                 </div>
                                 <div class="grid grid-cols-2 gap-4 text-center pt-2">
                                     <div>
@@ -112,411 +304,524 @@
                             </div>
                         </div>
                     </div>
-                    <div class="flex justify-between items-center pt-6 mt-6 border-t">
-                        <div class="flex items-center gap-4">
-                            <input type="date" id="fecha-estudio" class="input-field">
-                            <div class="flex items-center">
-                                <input id="enviado" type="checkbox" class="h-5 w-5 rounded">
-                                <label for="enviado" class="ml-2">Enviado</label>
-                            </div>
+                    
+                    <!-- Acciones del Formulario -->
+                    <div class="flex flex-col sm:flex-row justify-between items-center pt-6 mt-6 border-t-2 border-color-border gap-4">
+                         <div class="flex items-center self-start sm:self-center">
+                            <input id="enviado" type="checkbox" class="h-5 w-5 rounded border-gray-300 text-color-secondary focus:ring-color-secondary focus:ring-2">
+                            <label for="enviado" class="ml-3 block text-sm font-medium text-color-text-primary">
+                                Marcar como "Imágenes Enviadas"
+                            </label>
                         </div>
-                        <div class="flex gap-4">
-                            <button type="button" id="clear-form-btn" class="bg-gray-200 hover:bg-gray-300 py-3 px-8 rounded-lg">Limpiar</button>
-                            <button type="submit" class="btn-primary py-3 px-8 rounded-lg">Guardar</button>
+                        <div class="flex gap-4 w-full sm:w-auto">
+                            <button type="button" id="clear-form-btn" class="btn-secondary w-full sm:w-auto py-3 px-8 rounded-lg text-lg flex items-center justify-center gap-2">
+                                <span class="material-symbols-outlined">cleaning_services</span>
+                                Limpiar
+                            </button>
+                            <button type="submit" class="btn-primary w-full sm:w-auto py-3 px-8 rounded-lg text-lg flex items-center justify-center gap-2">
+                                <span class="material-symbols-outlined">save</span>
+                                Guardar
+                            </button>
                         </div>
                     </div>
                 </form>
             </div>
+
+            <!-- Vista de Consulta de Exámenes -->
             <div id="consultar-view" class="hidden">
-                 <div class="bg-white p-6 rounded-2xl shadow-lg border">
-                    <input type="text" id="search-input" class="input-field w-full md:w-1/3 mb-6" placeholder="Buscar...">
+                 <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-lg border border-color-border">
+                    <div class="mb-6">
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+                            <input type="text" id="search-input" class="input-field w-full md:w-1/2 lg:w-1/3 pl-12" placeholder="Buscar por ID, paciente, doctores...">
+                        </div>
+                    </div>
                     <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y">
+                        <table class="min-w-full divide-y divide-slate-200">
                             <thead class="bg-slate-50">
                                 <tr>
-                                    <th class="py-3 px-3 text-left text-sm font-semibold">Paciente</th>
-                                    <th class="py-3 px-3 text-left text-sm font-semibold">Fecha</th>
-                                    <th class="py-3 px-3 text-left text-sm font-semibold">Servicio</th>
-                                    <th class="py-3 px-3 text-left text-sm font-semibold">Monto</th>
-                                    <th class="py-3 px-3 text-center text-sm font-semibold">Acciones</th>
+                                    <th scope="col" class="py-3.5 px-3 text-left text-sm font-semibold text-slate-600">Paciente</th>
+                                    <th scope="col" class="py-3.5 px-3 text-left text-sm font-semibold text-slate-600">Fecha</th>
+                                    <th scope="col" class="py-3.5 px-3 text-left text-sm font-semibold text-slate-600">Servicio</th>
+                                    <th scope="col" class="py-3.5 px-3 text-left text-sm font-semibold text-slate-600">Dr. Reporta</th>
+                                    <th scope="col" class="py-3.5 px-3 text-left text-sm font-semibold text-slate-600">Monto</th>
+                                    <th scope="col" class="py-3.5 px-3 text-center text-sm font-semibold text-slate-600">Enviado</th>
+                                    <th scope="col" class="py-3.5 px-3 text-center text-sm font-semibold text-slate-600">Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody id="citas-table-body" class="divide-y"></tbody>
+                            <tbody id="citas-table-body" class="divide-y divide-slate-200 bg-white">
+                            </tbody>
                         </table>
                     </div>
                  </div>
             </div>
         </main>
+        
+        <!-- Barra de navegación inferior para móviles -->
+        <div class="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around shadow-top z-20">
+             <button id="nav-registrar-mobile" class="flex-1 py-3 flex flex-col items-center justify-center text-sm font-medium text-gray-500">
+                 <span class="material-symbols-outlined">edit_document</span>
+                 Registrar
+             </button>
+             <button id="nav-consultar-mobile" class="flex-1 py-3 flex flex-col items-center justify-center text-sm font-medium text-gray-500">
+                 <span class="material-symbols-outlined">manage_search</span>
+                 Consultar
+             </button>
+        </div>
     </div>
 
     <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // --- ESTADO Y REFERENCIAS GLOBALES ---
-        const appState = { currentUser: null, data: {}, isEditing: false, isViewing: false };
-        let appEventListenersAttached = false;
+        document.addEventListener('DOMContentLoaded', () => {
+            const appState = { currentUser: null, data: {}, isEditing: false, isViewing: false, listenersAttached: false };
 
-        const el = (id) => document.getElementById(id);
-        const loginScreen = el('login-screen'), appScreen = el('app-screen'), loginForm = el('login-form'),
-              loginError = el('login-error'), logoutButton = el('logout-button'), userDisplay = el('user-display'),
-              roleDisplay = el('role-display'), citaForm = el('cita-form'), citasTableBody = el('citas-table-body'),
-              searchInput = el('search-input'), clearFormBtn = el('clear-form-btn');
-        const nav = { registrar: el('nav-registrar'), consultar: el('nav-consultar') };
-        const views = { registrar: el('registrar-view'), consultar: el('consultar-view') };
-        const formFields = {
-            id: el('cita-id'), nombre: el('nombre'), identificacion: el('identificacion'),
-            especialidadContainer: el('especialidad'), tipoEstudio: el('tipo-estudio'),
-            medicoRefiere: el('medico-refiere'), medicoReporta: el('medico-reporta'),
-            descuento: el('descuento'), metodoPago: el('metodo-pago'), tipoCambio: el('tipo-cambio'),
-            enviado: el('enviado'), fechaEstudio: el('fecha-estudio')
-        };
-        const resumenFields = { base: el('resumen-base'), totalUsd: el('resumen-total-usd'), totalCrc: el('resumen-total-crc') };
-
-        // --- FUNCIONES UTILITARIAS ---
-        const parsePercent = str => parseFloat(String(str).replace('%', '')) / 100 || 0;
-        const parseCurrency = str => parseFloat(String(str).replace(/[$,₡]/g, '').replace(',', '.')) || 0;
-        const formatNumberForSheet = num => String(num.toFixed(2)).replace('.', ',');
-        const formatUSD = num => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
-        const formatCRC = num => new Intl.NumberFormat('es-CR', { style: 'currency', currency: 'CRC' }).format(num);
-
-        // --- LÓGICA DE API ---
-        async function apiCall(endpoint, options = {}) {
-            const btn = citaForm.querySelector('button[type="submit"]');
-            btn.disabled = true;
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000);
-            try {
-                const response = await fetch(endpoint, { ...options, signal: controller.signal });
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Server error: ${response.status} ${errorText}`);
-                }
-                return response.json();
-            } catch (error) {
-                console.error(`API call to ${endpoint} failed:`, error);
-                alert(`Error de comunicación con el servidor: ${error.message}`);
-                throw error;
-            } finally {
-                clearTimeout(timeoutId);
-                if (!appState.isViewing) btn.disabled = false;
-            }
-        }
-
-        // --- LÓGICA DE INICIALIZACIÓN Y NAVEGACIÓN ---
-        function initializeApp() {
-            loginScreen.style.display = 'none';
-            appScreen.style.display = 'flex';
-            userDisplay.textContent = appState.currentUser.Usuario;
-            roleDisplay.textContent = `Rol: ${appState.currentUser.Rol}`;
-            if (!appEventListenersAttached) {
-                setupAppEventListeners();
-                appEventListenersAttached = true;
-            }
-            resetForm();
-            showView('registrar');
-        }
-
-        const handleLogin = async (e) => {
-            e.preventDefault();
-            const btn = e.submitter;
-            btn.disabled = true;
-            btn.textContent = 'Verificando...';
-            const username = loginForm.username.value;
-            const password = loginForm.password.value;
+            const loginScreen = document.getElementById('login-screen');
+            const appScreen = document.getElementById('app-screen');
+            const loginForm = document.getElementById('login-form');
+            const loginError = document.getElementById('login-error');
+            const logoutButton = document.getElementById('logout-button');
+            const userDisplay = document.getElementById('user-display');
+            const roleDisplay = document.getElementById('role-display');
+            const citaForm = document.getElementById('cita-form');
+            const citasTableBody = document.getElementById('citas-table-body');
+            const searchInput = document.getElementById('search-input');
+            const clearFormBtn = document.getElementById('clear-form-btn');
             
-            try {
-                const data = await apiCall('/.netlify/functions/get-data');
-                appState.data = data;
-                let user;
-                if (username === 'admin' && password === 'admin') {
-                    user = { Usuario: 'Admin', Rol: 'Admin' };
-                } else {
-                    user = (appState.data.usuarios || []).find(u => u.Usuario === username && u.Contraseña === password);
+            const nav = {
+                registrar: document.getElementById('nav-registrar'),
+                consultar: document.getElementById('nav-consultar'),
+                registrarMobile: document.getElementById('nav-registrar-mobile'),
+                consultarMobile: document.getElementById('nav-consultar-mobile'),
+            };
+            const views = {
+                registrar: document.getElementById('registrar-view'),
+                consultar: document.getElementById('consultar-view'),
+            };
+
+            const formFields = {
+                id: document.getElementById('cita-id'),
+                nombre: document.getElementById('nombre'),
+                identificacion: document.getElementById('identificacion'),
+                especialidadContainer: document.getElementById('especialidad'),
+                tipoEstudio: document.getElementById('tipo-estudio'),
+                medicoRefiere: document.getElementById('medico-refiere'),
+                medicoReporta: document.getElementById('medico-reporta'),
+                descuento: document.getElementById('descuento'),
+                metodoPago: document.getElementById('metodo-pago'),
+                tipoCambio: document.getElementById('tipo-cambio'),
+                enviado: document.getElementById('enviado'),
+                fechaEstudio: document.getElementById('fecha-estudio'),
+                registra: document.getElementById('registro-field'),
+            };
+
+            const resumenFields = {
+                base: document.getElementById('resumen-base'),
+                totalUsd: document.getElementById('resumen-total-usd'),
+                totalCrc: document.getElementById('resumen-total-crc')
+            };
+
+            const parsePercent = (str) => parseFloat(String(str).replace('%', '')) / 100 || 0;
+            const parseCurrency = (str) => parseFloat(String(str).replace(/[$,₡]/g, '').replace(',', '.')) || 0;
+            const formatNumberForSheet = (num) => String(num.toFixed(2)).replace('.', ',');
+            const formatUSD = (num) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
+            const formatCRC = (num) => new Intl.NumberFormat('es-CR', { style: 'currency', currency: 'CRC' }).format(num);
+
+            async function fetchWithTimeout(url, options = {}, timeout = 8000) {
+                const controller = new AbortController();
+                const id = setTimeout(() => controller.abort(), timeout);
+                try {
+                    const response = await fetch(url, { ...options, signal: controller.signal });
+                    return response;
+                } catch (error) {
+                    if (error.name === 'AbortError') throw new Error('Request timed out');
+                    throw error;
+                } finally {
+                    clearTimeout(id);
                 }
-                
-                if (user) {
-                    appState.currentUser = user;
+            }
+
+            async function fetchData() {
+                try {
+                    const response = await fetchWithTimeout('/.netlify/functions/get-data');
+                    if (!response.ok) throw new Error('Server response not OK');
+                    appState.data = await response.json();
+                    return true;
+                } catch (error) {
+                    console.error("Fetch Error:", error.message);
+                    return false;
+                }
+            }
+            
+            function initializeApp() {
+                loginScreen.style.display = 'none';
+                appScreen.style.display = 'flex';
+                userDisplay.textContent = appState.currentUser.Usuario;
+                roleDisplay.textContent = `Rol: ${appState.currentUser.Rol}`;
+                const dataLoaded = appState.data.servicios && appState.data.servicios.length > 0;
+                if (dataLoaded) {
                     populateFormDropdowns();
                     renderCitasTable(appState.data.citas);
-                    initializeApp();
+                    document.querySelector('button[type="submit"]').disabled = false;
                 } else {
-                    loginError.textContent = 'Usuario o contraseña incorrectos.';
-                    loginError.classList.remove('hidden');
+                    if (appState.currentUser.Rol === 'Admin') {
+                        alert('ADVERTENCIA: No se pudo conectar con Google Sheets. La aplicación se ejecutará en modo offline.');
+                        citasTableBody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-500">Modo Offline: No se pudo cargar la información.</td></tr>`;
+                        document.querySelector('button[type="submit"]').disabled = true;
+                    }
                 }
-            } catch (error) {
-                 if (username === 'admin' && password === 'admin') {
-                    appState.currentUser = { Usuario: 'Admin', Rol: 'Admin' };
-                    alert('ADVERTENCIA: No se pudo conectar con Google Sheets. Modo offline.');
-                    initializeApp();
+                if (!appState.listenersAttached) {
+                    setupAppEventListeners();
+                    appState.listenersAttached = true;
+                }
+                resetForm();
+                showView('registrar');
+            }
+
+            const handleLogin = async (event) => {
+                event.preventDefault();
+                loginError.classList.add('hidden');
+                const submitButton = loginForm.querySelector('button[type="submit"]');
+                submitButton.disabled = true;
+                submitButton.textContent = 'Verificando...';
+                try {
+                    const username = loginForm.username.value;
+                    const password = loginForm.password.value;
+                    const dataLoaded = await fetchData();
+                    if (username === 'admin' && password === 'admin') {
+                        appState.currentUser = { Usuario: 'Admin', Rol: 'Admin' };
+                        initializeApp();
+                        return;
+                    }
+                    if (!dataLoaded) {
+                        loginError.textContent = 'No se pudo conectar con la base de datos.';
+                        loginError.classList.remove('hidden');
+                        return;
+                    }
+                    const foundUser = appState.data.usuarios.find(u => u.Usuario === username && u.Contraseña === password);
+                    if (foundUser) {
+                        appState.currentUser = foundUser;
+                        initializeApp();
+                    } else {
+                        loginError.textContent = 'Usuario o contraseña incorrectos.';
+                        loginError.classList.remove('hidden');
+                    }
+                } finally {
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Ingresar';
+                }
+            };
+
+            const handleLogout = () => {
+                appState.currentUser = null;
+                appState.data = { usuarios: [], servicios: [], medicos: [], metodosDePago: [], descuentos: [], citas: [] };
+                appScreen.style.display = 'none';
+                loginScreen.style.display = 'flex';
+                loginForm.reset();
+            };
+
+            function showView(viewName) {
+                Object.values(views).forEach(view => view.classList.add('hidden'));
+                views[viewName].classList.remove('hidden');
+                const isRegistrar = viewName === 'registrar';
+                nav.registrar.classList.toggle('active', isRegistrar);
+                nav.consultar.classList.toggle('active', !isRegistrar);
+                nav.registrarMobile.style.color = isRegistrar ? 'var(--color-secondary)' : '#6b7280';
+                nav.consultarMobile.style.color = !isRegistrar ? 'var(--color-secondary)' : '#6b7280';
+            }
+
+            function populateFormDropdowns() {
+                const populate = (select, data, textFn, valueFn) => {
+                    select.innerHTML = '<option value="">Seleccione...</option>';
+                    data.forEach(item => {
+                        const option = document.createElement('option');
+                        option.textContent = textFn(item);
+                        option.value = valueFn(item);
+                        select.appendChild(option);
+                    });
+                };
+                populate(formFields.medicoRefiere, appState.data.medicos, m => m.Medico, m => m.Medico);
+                populate(formFields.medicoReporta, appState.data.medicos, m => m.Medico, m => m.Medico);
+                populate(formFields.descuento, appState.data.descuentos, d => d.Descuentos, d => parsePercent(d.Descuentos));
+                populate(formFields.metodoPago, appState.data.metodosDePago, p => p.Tipo, p => p.Tipo);
+            }
+
+            function generateActionButtons(cita) {
+                const role = appState.currentUser.Rol;
+                let buttons = '';
+                const viewBtn = `<button data-id="${cita.ID}" class="view-btn text-green-600 hover:text-green-800" title="Ver"><span class="material-symbols-outlined">visibility</span></button>`;
+                const editBtn = `<button data-id="${cita.ID}" class="edit-btn text-blue-600 hover:text-blue-800" title="Editar"><span class="material-symbols-outlined">edit</span></button>`;
+                const deleteBtn = `<button data-id="${cita.ID}" class="delete-btn text-red-600 hover:text-red-800" title="Eliminar"><span class="material-symbols-outlined">delete</span></button>`;
+                switch (role) {
+                    case 'Examenes': buttons = viewBtn; break;
+                    case 'Imagenes': buttons = viewBtn + editBtn; break;
+                    case 'Admin': buttons = viewBtn + editBtn + deleteBtn; break;
+                }
+                return buttons;
+            }
+
+            function renderCitasTable(citas) {
+                citasTableBody.innerHTML = '';
+                if (!citas || citas.length === 0) {
+                    citasTableBody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-500">No hay registros para mostrar.</td></tr>`;
                     return;
                 }
-                loginError.textContent = 'No se pudo conectar al servidor.';
-                loginError.classList.remove('hidden');
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Ingresar';
-            }
-        };
-
-        function handleLogout() {
-            Object.assign(appState, { currentUser: null, data: {}, isEditing: false, isViewing: false });
-            appScreen.style.display = 'none';
-            loginScreen.style.display = 'flex';
-            loginForm.reset();
-        }
-
-        function showView(viewName) {
-            Object.values(views).forEach(v => v.classList.add('hidden'));
-            views[viewName].classList.remove('hidden');
-            Object.keys(nav).forEach(k => nav[k].classList.toggle('active', k === viewName));
-        }
-
-        // --- LÓGICA DE UI Y FORMULARIO ---
-        function populateFormDropdowns() {
-            const populate = (select, data, textFn, valueFn) => {
-                select.innerHTML = '<option value="">Seleccione...</option>';
-                (data || []).forEach(item => {
-                    const option = document.createElement('option');
-                    option.textContent = textFn(item);
-                    option.value = valueFn(item);
-                    select.appendChild(option);
+                citas.forEach(cita => {
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-slate-50';
+                    const enviado = cita.Enviado && cita.Enviado.toLowerCase() === 'si';
+                    const montoFinal = parseCurrency(cita['Monto total Descontado con IVA']);
+                    row.innerHTML = `
+                        <td class="whitespace-nowrap py-4 px-3 text-sm font-medium text-slate-900">${cita.Nombre || ''}</td>
+                        <td class="whitespace-nowrap py-4 px-3 text-sm text-slate-600">${cita['Fecha de Estudio'] || ''}</td>
+                        <td class="py-4 px-3 text-sm text-slate-600">${cita['Tipo de Estudio'] || ''}</td>
+                        <td class="whitespace-nowrap py-4 px-3 text-sm font-medium text-slate-600">${cita['Medico que Reporta'] || ''}</td>
+                        <td class="whitespace-nowrap py-4 px-3 text-sm font-semibold text-slate-900">${formatUSD(montoFinal)}</td>
+                        <td class="py-4 px-3 text-center">
+                            <span class="material-symbols-outlined text-2xl ${enviado ? 'text-teal-500' : 'text-amber-500'}" title="${enviado ? 'Enviado' : 'Pendiente'}">
+                                ${enviado ? 'check_circle' : 'hourglass_top'}
+                            </span>
+                        </td>
+                        <td class="py-4 px-3 text-center space-x-2">${generateActionButtons(cita)}</td>
+                    `;
+                    citasTableBody.appendChild(row);
                 });
-            };
-            populate(formFields.medicoRefiere, appState.data.medicos, m => m.Medico, m => m.Medico);
-            populate(formFields.medicoReporta, appState.data.medicos, m => m.Medico, m => m.Medico);
-            populate(formFields.descuento, appState.data.descuentos, d => d.Descuentos, d => parsePercent(d.Descuentos));
-            populate(formFields.metodoPago, appState.data.metodosDePago, p => p.Tipo, p => p.Tipo);
-        }
+            }
 
-        function generateActionButtons(cita) {
-            const role = appState.currentUser.Rol;
-            const viewBtn = `<button data-id="${cita.ID}" class="view-btn text-green-600" title="Ver"><span class="material-symbols-outlined">visibility</span></button>`;
-            const editBtn = `<button data-id="${cita.ID}" class="edit-btn text-blue-600" title="Editar"><span class="material-symbols-outlined">edit</span></button>`;
-            const deleteBtn = `<button data-id="${cita.ID}" class="delete-btn text-red-600" title="Eliminar"><span class="material-symbols-outlined">delete</span></button>`;
-            if (role === 'Admin') return viewBtn + editBtn + deleteBtn;
-            if (role === 'Imagenes') return viewBtn + editBtn;
-            if (role === 'Examenes') return viewBtn;
-            return '';
-        }
+            function setupAppEventListeners() {
+                logoutButton.addEventListener('click', handleLogout);
+                citaForm.addEventListener('submit', handleFormSubmit);
+                clearFormBtn.addEventListener('click', resetForm);
+                Object.values(nav).forEach(btn => btn.addEventListener('click', (e) => {
+                    const view = e.currentTarget.id.includes('registrar') ? 'registrar' : 'consultar';
+                    showView(view);
+                }));
+                formFields.especialidadContainer.addEventListener('click', (e) => {
+                    const button = e.target.closest('button');
+                    if (button && !button.classList.contains('active')) {
+                        formFields.especialidadContainer.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+                        button.classList.add('active');
+                        handleEspecialidadChange();
+                    }
+                });
+                const calculationInputs = [formFields.tipoEstudio, formFields.descuento, formFields.metodoPago, formFields.tipoCambio];
+                calculationInputs.forEach(input => input.addEventListener('change', calculateAll));
+                citasTableBody.addEventListener('click', (e) => {
+                    const button = e.target.closest('button');
+                    if (!button) return;
+                    const citaId = button.dataset.id;
+                    if (button.classList.contains('view-btn')) handleViewClick(citaId);
+                    else if (button.classList.contains('edit-btn')) handleEditClick(citaId);
+                    else if (button.classList.contains('delete-btn')) handleDeleteClick(citaId);
+                });
+                searchInput.addEventListener('keyup', () => {
+                    const searchTerm = searchInput.value.toLowerCase();
+                    const filteredCitas = appState.data.citas.filter(cita => 
+                        Object.values(cita).some(val => String(val).toLowerCase().includes(searchTerm))
+                    );
+                    renderCitasTable(filteredCitas);
+                });
+            }
 
-        function renderCitasTable(citas) {
-            citasTableBody.innerHTML = '';
-             (citas || []).forEach(cita => {
-                const row = document.createElement('tr');
-                const montoFinal = parseCurrency(cita['Monto total Descontado con IVA']);
-                row.innerHTML = `
-                    <td class="py-4 px-3">${cita.Nombre}</td>
-                    <td class="py-4 px-3">${cita['Fecha de Estudio']}</td>
-                    <td class="py-4 px-3">${cita['Tipo de Estudio']}</td>
-                    <td class="py-4 px-3">${formatUSD(montoFinal)}</td>
-                    <td class="py-4 px-3 text-center space-x-2">${generateActionButtons(cita)}</td>`;
-                citasTableBody.appendChild(row);
-            });
-        }
-
-        function setupAppEventListeners() {
-            logoutButton.addEventListener('click', handleLogout);
-            citaForm.addEventListener('submit', handleFormSubmit);
-            clearFormBtn.addEventListener('click', resetForm);
-            Object.values(nav).forEach(btn => btn.addEventListener('click', e => showView(e.currentTarget.id.includes('registrar') ? 'registrar' : 'consultar')));
-            formFields.especialidadContainer.addEventListener('click', e => {
-                if (e.target.tagName === 'BUTTON' && !e.target.classList.contains('active')) {
-                    formFields.especialidadContainer.querySelector('.active').classList.remove('active');
-                    e.target.classList.add('active');
-                    handleEspecialidadChange();
-                }
-            });
-            [formFields.tipoEstudio, formFields.descuento, formFields.metodoPago, formFields.tipoCambio].forEach(input => input.addEventListener('change', calculateAll));
-            citasTableBody.addEventListener('click', e => {
-                const btn = e.target.closest('button');
-                if (!btn) return;
-                const id = btn.dataset.id;
-                if (btn.classList.contains('view-btn')) handleViewClick(id);
-                if (btn.classList.contains('edit-btn')) handleEditClick(id);
-                if (btn.classList.contains('delete-btn')) handleDeleteClick(id);
-            });
-            searchInput.addEventListener('keyup', () => {
-                const term = searchInput.value.toLowerCase();
-                const filtered = (appState.data.citas || []).filter(c => Object.values(c).some(v => String(v).toLowerCase().includes(term)));
-                renderCitasTable(filtered);
-            });
-        }
-
-        function handleEspecialidadChange() {
-            const activeBtn = formFields.especialidadContainer.querySelector('.active');
-            const especialidad = activeBtn ? activeBtn.dataset.studyType : 'RX';
-            const services = (appState.data.servicios || []).filter(s => s.Código === especialidad);
-            const options = services.map(s => `<option value="${s['Producto o Servicio']}">${s['Producto o Servicio']}</option>`).join('');
-            formFields.tipoEstudio.innerHTML = `<option value="">Seleccione Servicio...</option>${options}`;
-            calculateAll();
-        }
-
-        function calculateAll() {
-            const service = (appState.data.servicios || []).find(s => s['Producto o Servicio'] === formFields.tipoEstudio.value);
-            const payMethod = (appState.data.metodosDePago || []).find(p => p.Tipo === formFields.metodoPago.value);
-            const montoTotal = service ? parseCurrency(service.Precio) : 0;
-            const descuento = parseFloat(formFields.descuento.value) || 0;
-            const tipoCambio = parseFloat(formFields.tipoCambio.value) || 520;
-            const montoDescontado = montoTotal * (1 - descuento);
-            const ivaPercent = payMethod ? parsePercent(payMethod.IVA) : 0;
-            const iva = montoDescontado * ivaPercent;
-            const montoConIva = montoDescontado + iva;
-            resumenFields.base.value = formatUSD(montoTotal);
-            resumenFields.totalUsd.textContent = formatUSD(montoConIva);
-            resumenFields.totalCrc.textContent = formatCRC(montoConIva * tipoCambio);
-        }
-
-        function setFormState(disabled) {
-            Array.from(citaForm.elements).forEach(el => el.disabled = disabled);
-            formFields.especialidadContainer.querySelectorAll('button').forEach(btn => btn.disabled = disabled);
-            citaForm.querySelector('button[type="submit"]').style.display = disabled ? 'none' : 'flex';
-        }
-
-        function resetForm() {
-            citaForm.reset();
-            formFields.id.value = '';
-            Object.assign(appState, { isEditing: false, isViewing: false });
-            formFields.fechaEstudio.value = new Date().toISOString().split('T')[0];
-            citaForm.querySelector('button[type="submit"]').textContent = 'Guardar';
-            setFormState(false);
-            handleEspecialidadChange();
-        }
-        
-        function loadCitaIntoForm(citaId) {
-            const cita = (appState.data.citas || []).find(c => c.ID === citaId);
-            if (!cita) return;
-            formFields.id.value = cita.ID;
-            formFields.nombre.value = cita.Nombre;
-            formFields.identificacion.value = cita.Identificación;
-            const [day, month, year] = cita['Fecha de Estudio'].split('/');
-            formFields.fechaEstudio.value = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-            formFields.especialidadContainer.querySelector('.active').classList.remove('active');
-            formFields.especialidadContainer.querySelector(`[data-study-type="${cita.Especialidad}"]`).classList.add('active');
-            handleEspecialidadChange();
-            setTimeout(() => { 
-                formFields.tipoEstudio.value = cita['Tipo de Estudio'];
-                formFields.medicoRefiere.value = cita['Medico que Refiere'];
-                formFields.medicoReporta.value = cita['Medico que Reporta'];
-                const discountOption = Array.from(formFields.descuento.options).find(opt => opt.text === cita.Descuento);
-                if (discountOption) formFields.descuento.value = discountOption.value;
-                formFields.metodoPago.value = cita['Método pago'];
-                formFields.tipoCambio.value = parseCurrency(cita['Tipo de cambio']);
-                formFields.enviado.checked = cita.Enviado === 'Si';
+            function handleEspecialidadChange() {
+                const activeBtn = formFields.especialidadContainer.querySelector('.active');
+                const especialidad = activeBtn ? activeBtn.dataset.studyType : null;
+                const services = appState.data.servicios.filter(s => s.Código === especialidad);
+                const options = services.map(s => `<option value="${s['Producto o Servicio']}">${s['Producto o Servicio']}</option>`).join('');
+                formFields.tipoEstudio.innerHTML = `<option value="">Seleccione...</option>${options}`;
                 calculateAll();
-            }, 100);
-        }
+            }
+            
+            function calculateAll() {
+                const selectedService = appState.data.servicios.find(s => s['Producto o Servicio'] === formFields.tipoEstudio.value);
+                const selectedMetodoPago = appState.data.metodosDePago.find(mp => mp.Tipo === formFields.metodoPago.value);
+                const montoTotal_J = selectedService ? parseCurrency(selectedService.Precio) : 0;
+                const descuento_K = parseFloat(formFields.descuento.value) || 0;
+                const tipoCambio_R = parseFloat(formFields.tipoCambio.value) || 520;
+                const montoTotalDescontado_M = montoTotal_J * (1 - descuento_K);
+                const ivaPercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.IVA) : 0;
+                const feePercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.Fees) : 0;
+                const iva_O = montoTotalDescontado_M * ivaPercent;
+                const montoTotalConIVA_Q = montoTotalDescontado_M + iva_O;
+                const fee_P = montoTotalConIVA_Q * feePercent;
+                const totalACobrar = montoTotalConIVA_Q + fee_P;
+                resumenFields.base.value = formatUSD(montoTotal_J);
+                resumenFields.totalUsd.textContent = formatUSD(totalACobrar);
+                resumenFields.totalCrc.textContent = formatCRC(totalACobrar * tipoCambio_R);
+            }
 
-        function handleViewClick(id) {
-            Object.assign(appState, { isViewing: true, isEditing: false });
-            loadCitaIntoForm(id);
-            setFormState(true);
-            showView('registrar');
-        }
-
-        function handleEditClick(id) {
-            Object.assign(appState, { isEditing: true, isViewing: false });
-            loadCitaIntoForm(id);
-            setFormState(false);
-            citaForm.querySelector('button[type="submit"]').textContent = 'Actualizar';
-            showView('registrar');
-        }
-
-        async function handleDeleteClick(id) {
-            if (!confirm('¿Seguro que deseas eliminar este registro?')) return;
-            const cita = (appState.data.citas || []).find(c => c.ID === id);
-            try {
-                await apiCall('/.netlify/functions/delete-cita', {
-                    method: 'DELETE', body: JSON.stringify({ ID: id, tipoEstudio: cita.Especialidad })
+            function setFormState(disabled) {
+                Object.values(formFields).forEach(field => {
+                    if (field.tagName === 'DIV') {
+                        field.querySelectorAll('button').forEach(btn => btn.disabled = disabled);
+                    } else {
+                        field.disabled = disabled;
+                    }
                 });
-                appState.data.citas = appState.data.citas.filter(c => c.ID !== id);
-                renderCitasTable(appState.data.citas);
-                alert('Registro eliminado.');
-            } catch (e) { /* Error is handled in apiCall */ }
-        }
-        
-        async function handleFormSubmit(e) {
-            e.preventDefault();
-            if (appState.isViewing) return;
+                citaForm.querySelector('button[type="submit"]').style.display = disabled ? 'none' : 'flex';
+                clearFormBtn.style.display = disabled ? 'flex' : 'flex';
+            }
 
-            const service = (appState.data.servicios || []).find(s => s['Producto o Servicio'] === formFields.tipoEstudio.value);
-            const payMethod = (appState.data.metodosDePago || []).find(p => p.Tipo === formFields.metodoPago.value);
-            const medico = (appState.data.medicos || []).find(m => m.Medico === formFields.medicoReporta.value);
-            
-            // --- INICIO DE CÁLCULOS ---
-            const montoTotal = service ? parseCurrency(service.Precio) : 0;
-            const descuento = parseFloat(formFields.descuento.value) || 0;
-            const tipoCambio = parseFloat(formFields.tipoCambio.value) || 520;
-            const ivaPercent = payMethod ? parsePercent(payMethod.IVA) : 0;
-            const feePercent = payMethod ? parsePercent(payMethod.Fees) : 0;
-            const comisionPercent = medico ? parsePercent(medico.Comisión) : 0;
-            const tasaIVAMedico = 0.04;
+            function resetForm() {
+                citaForm.reset();
+                formFields.id.value = '';
+                appState.isEditing = false;
+                appState.isViewing = false;
+                const today = new Date().toISOString().split('T')[0];
+                formFields.fechaEstudio.value = today;
+                formFields.registra.textContent = appState.currentUser.Usuario;
+                citaForm.querySelector('button[type="submit"]').textContent = 'Guardar';
+                setFormState(false);
+                handleEspecialidadChange();
+            }
 
-            const montoDescontado = montoTotal * (1 - descuento);
-            const iva = montoDescontado * ivaPercent;
-            const montoConIva = montoDescontado + iva;
-            const fee = montoConIva * feePercent; // El fee se calcula sobre el monto con IVA
-            const cobrarTotal = montoConIva; // El cliente no paga el fee, este se deduce de la ganancia
-            
-            let comision = 0;
-            if (service && comisionPercent > 0) {
-                if (service.Cobro === 'Normal') {
-                    comision = (montoConIva - fee) * comisionPercent;
-                } else {
-                    const baseComision = parseCurrency(service['Base para comisión']);
-                    const montoPagar = parseCurrency(service['Moto a pagar']);
-                    const parte1 = ((baseComision * (1 - descuento)) * (1 + tasaIVAMedico)) - ((baseComision / montoTotal) * fee);
-                    const parte2 = ((montoPagar * (1 - descuento)) * (1 + tasaIVAMedico)) - ((montoPagar / montoTotal) * fee);
-                    comision = (parte1 * comisionPercent) + parte2;
+            function loadCitaIntoForm(citaId) {
+                const cita = appState.data.citas.find(c => c.ID === citaId);
+                if (!cita) return;
+                formFields.id.value = cita.ID;
+                formFields.nombre.value = cita.Nombre;
+                formFields.identificacion.value = cita.Identificación;
+                const dateParts = cita['Fecha de Estudio'].split('/');
+                const isoDate = `${dateParts[2]}-${dateParts[1].padStart(2, '0')}-${dateParts[0].padStart(2, '0')}`;
+                formFields.fechaEstudio.value = isoDate;
+                formFields.especialidadContainer.querySelectorAll('button').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.studyType === cita.Especialidad);
+                });
+                handleEspecialidadChange();
+                setTimeout(() => {
+                    formFields.tipoEstudio.value = cita['Tipo de Estudio'];
+                    formFields.medicoRefiere.value = cita['Medico que Refiere'];
+                    formFields.medicoReporta.value = cita['Medico que Reporta'];
+                    formFields.descuento.value = parsePercent(cita.Descuento);
+                    formFields.metodoPago.value = cita['Método pago'];
+                    formFields.tipoCambio.value = parseCurrency(cita['Tipo de cambio']);
+                    formFields.enviado.checked = cita.Enviado && cita.Enviado.toLowerCase() === 'si';
+                    calculateAll();
+                }, 100);
+            }
+
+            function handleViewClick(citaId) {
+                appState.isViewing = true;
+                appState.isEditing = false;
+                loadCitaIntoForm(citaId);
+                setFormState(true);
+                showView('registrar');
+            }
+
+            function handleEditClick(citaId) {
+                appState.isEditing = true;
+                appState.isViewing = false;
+                loadCitaIntoForm(citaId);
+                setFormState(false);
+                citaForm.querySelector('button[type="submit"]').textContent = 'Actualizar';
+                showView('registrar');
+            }
+
+            async function handleDeleteClick(citaId) {
+                if (!confirm('¿Estás seguro de que deseas eliminar este registro?')) return;
+                const cita = appState.data.citas.find(c => c.ID === citaId);
+                if (!cita) return;
+                showLoader(true);
+                try {
+                    const response = await fetchWithTimeout('/.netlify/functions/delete-cita', {
+                        method: 'DELETE',
+                        body: JSON.stringify({ ID: cita.ID, tipoEstudio: cita.Especialidad })
+                    });
+                    if (!response.ok) throw new Error('Error en el servidor al eliminar.');
+                    await fetchData();
+                    renderCitasTable(appState.data.citas);
+                    alert('Registro eliminado con éxito.');
+                } catch (error) {
+                    console.error('Delete Error:', error);
+                    alert('No se pudo eliminar el registro.');
+                } finally {
+                    showLoader(false);
                 }
             }
             
-            const debitoFiscal = iva;
-            const creditoFiscal = (comision / (1 + tasaIVAMedico)) * tasaIVAMedico;
-            const [year, month, day] = formFields.fechaEstudio.value.split('-');
-            
-            const citaData = {
-                ID: formFields.id.value || Math.floor(100000 + Math.random() * 900000).toString(),
-                Enviado: formFields.enviado.checked ? 'Si' : 'No',
-                'Fecha de Estudio': `${day}/${month}/${year}`,
-                Nombre: formFields.nombre.value,
-                Identificación: formFields.identificacion.value,
-                Especialidad: formFields.especialidadContainer.querySelector('.active').dataset.studyType,
-                'Tipo de Estudio': formFields.tipoEstudio.value,
-                'Medico que Refiere': formFields.medicoRefiere.value,
-                'Medico que Reporta': formFields.medicoReporta.value,
-                'Monto Total': formatNumberForSheet(montoTotal),
-                'Descuento': `${(descuento * 100).toFixed(0)}%`,
-                'Descuento aplicado por': appState.currentUser.Usuario,
-                'Monto Total Descontado': formatNumberForSheet(montoDescontado),
-                'Método pago': formFields.metodoPago.value,
-                IVA: formatNumberForSheet(iva),
-                Fee: formatNumberForSheet(fee),
-                'Monto total Descontado con IVA': formatNumberForSheet(cobrarTotal),
-                'Tipo de cambio': tipoCambio,
-                'Cobrar ₡': formatNumberForSheet(cobrarTotal * tipoCambio),
-                'Cobrar $': formatNumberForSheet(cobrarTotal),
-                'Porcentaje de comisión': `${(comisionPercent * 100).toFixed(0)}%`,
-                'Comisión en Dólares': formatNumberForSheet(comision),
-                'Comisión en Colones': formatNumberForSheet(comision * tipoCambio),
-                'Debito Fiscal': formatNumberForSheet(debitoFiscal),
-                'Crédito Fiscal': formatNumberForSheet(creditoFiscal),
-                'IVA Pagado a Hacienda': formatNumberForSheet(debitoFiscal - creditoFiscal)
-            };
-            
-            const endpoint = appState.isEditing ? '/.netlify/functions/update-cita' : '/.netlify/functions/add-cita';
-            const method = appState.isEditing ? 'PUT' : 'POST';
-            
-            try {
-                await apiCall(endpoint, { method, body: JSON.stringify({ ...citaData, tipoEstudio: citaData.Especialidad }) });
-                alert(`Registro ${appState.isEditing ? 'actualizado' : 'guardado'} con éxito.`);
-                const newData = await apiCall('/.netlify/functions/get-data');
-                appState.data = newData;
-                renderCitasTable(appState.data.citas);
-                resetForm();
-            } catch (e) { /* Error is handled in apiCall */ }
-        }
-        
-        loginForm.addEventListener('submit', handleLogin);
-    });
+            async function handleFormSubmit(event) {
+                event.preventDefault();
+                if (appState.isViewing) return;
+                showLoader(true);
+                const selectedService = appState.data.servicios.find(s => s['Producto o Servicio'] === formFields.tipoEstudio.value);
+                const selectedMetodoPago = appState.data.metodosDePago.find(mp => mp.Tipo === formFields.metodoPago.value);
+                const selectedMedicoReporta = appState.data.medicos.find(m => m.Medico === formFields.medicoReporta.value);
+                const activeEspecialidad = formFields.especialidadContainer.querySelector('.active').dataset.studyType;
+                const montoTotal_J = selectedService ? parseCurrency(selectedService.Precio) : 0;
+                const descuento_K = parseFloat(formFields.descuento.value) || 0;
+                const tipoCambio_R = parseFloat(formFields.tipoCambio.value) || 520;
+                const montoTotalDescontado_M = montoTotal_J * (1 - descuento_K);
+                const ivaPercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.IVA) : 0;
+                const feePercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.Fees) : 0;
+                const iva_O = montoTotalDescontado_M * ivaPercent;
+                const montoTotalConIVA_Q = montoTotalDescontado_M + iva_O;
+                const fee_P = montoTotalConIVA_Q * feePercent;
+                const cobrarUSD_T = montoTotalConIVA_Q + fee_P;
+                const cobrarCRC_S = cobrarUSD_T * tipoCambio_R;
+                const porcentajeComision_U = selectedMedicoReporta ? parsePercent(selectedMedicoReporta.Comisión) : 0;
+                let comisionDolares_W = 0;
+                if (selectedService && porcentajeComision_U > 0) {
+                    if (selectedService.Cobro === 'Normal') {
+                        comisionDolares_W = (montoTotalDescontado_M - fee_P) * porcentajeComision_U;
+                    } else {
+                         const baseComision_BC = parseCurrency(selectedService['Base para comisión']);
+                         const montoPagar_MP = parseCurrency(selectedService['Moto a pagar']);
+                         const parte1 = (baseComision_BC * (1-descuento_K)) - ((baseComision_BC / montoTotal_J) * fee_P);
+                         const parte2 = (montoPagar_MP * (1-descuento_K)) - ((montoPagar_MP / montoTotal_J) * fee_P);
+                         comisionDolares_W = (parte1 * porcentajeComision_U) + parte2;
+                    }
+                }
+                const comisionColones_V = comisionDolares_W * tipoCambio_R;
+                const debitoFiscal_X = iva_O;
+                const creditoFiscal_Y = fee_P;
+                const ivaPagadoHacienda_Z = debitoFiscal_X - creditoFiscal_Y;
+                const dateParts = formFields.fechaEstudio.value.split('-');
+                const formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+                const citaData = {
+                    ID: formFields.id.value || Math.floor(100000 + Math.random() * 900000).toString(),
+                    Enviado: formFields.enviado.checked ? 'Si' : 'No',
+                    'Fecha de Estudio': formattedDate,
+                    Nombre: formFields.nombre.value,
+                    Identificación: formFields.identificacion.value,
+                    Especialidad: activeEspecialidad,
+                    'Tipo de Estudio': formFields.tipoEstudio.value,
+                    'Medico que Refiere': formFields.medicoRefiere.value,
+                    'Medico que Reporta': formFields.medicoReporta.value,
+                    'Monto Total': formatNumberForSheet(montoTotal_J),
+                    Descuento: `${descuento_K * 100}%`,
+                    'Descuento aplicado por': appState.currentUser.Usuario,
+                    'Monto Total Descontado': formatNumberForSheet(montoTotalDescontado_M),
+                    'Método pago': formFields.metodoPago.value,
+                    IVA: formatNumberForSheet(iva_O),
+                    Fee: formatNumberForSheet(fee_P),
+                    'Monto total Descontado con IVA': formatNumberForSheet(cobrarUSD_T),
+                    'Tipo de cambio': tipoCambio_R,
+                    'Cobrar ₡': formatNumberForSheet(cobrarCRC_S),
+                    'Cobrar $': formatNumberForSheet(cobrarUSD_T),
+                    'Porcentaje de comisión': `${porcentajeComision_U * 100}%`,
+                    'Comisión en Colones': formatNumberForSheet(comisionColones_V),
+                    'Comisión en Dólares': formatNumberForSheet(comisionDolares_W),
+                    'Debito Fiscal': formatNumberForSheet(debitoFiscal_X),
+                    'Crédito Fiscal': formatNumberForSheet(creditoFiscal_Y),
+                    'IVA Pagado a Hacienda': formatNumberForSheet(ivaPagadoHacienda_Z > 0 ? ivaPagadoHacienda_Z : 0),
+                };
+                const endpoint = appState.isEditing ? '/.netlify/functions/update-cita' : '/.netlify/functions/add-cita';
+                const method = appState.isEditing ? 'PUT' : 'POST';
+                const payload = { ...citaData, tipoEstudio: citaData.Especialidad };
+                try {
+                    const response = await fetchWithTimeout(endpoint, { method: method, body: JSON.stringify(payload) });
+                    if (!response.ok) throw new Error(`Error en el servidor: ${await response.text()}`);
+                    await fetchData();
+                    renderCitasTable(appState.data.citas);
+                    resetForm();
+                    alert(`Registro ${appState.isEditing ? 'actualizado' : 'guardado'} con éxito.`);
+                } catch (error) {
+                    console.error("Submit Error:", error);
+                    alert('No se pudo guardar el registro.');
+                } finally {
+                    showLoader(false);
+                }
+            }
+            loginForm.addEventListener('submit', handleLogin);
+        });
     </script>
 </body>
 </html>
