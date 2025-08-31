@@ -148,7 +148,6 @@
             margin-bottom: 0.5rem;
             display: block;
         }
-        /* ARCHITECTURAL FIX (v10.10): Refined font clamping and forced single-line display. */
         .total-amount {
             font-size: clamp(1.1rem, 4vw, 2rem);
             white-space: nowrap;
@@ -445,11 +444,18 @@
             // =================================================================================
             const parsePercent = (val) => parseFloat(String(val).replace('%', '')) / 100 || 0;
             
+            // ARCHITECTURAL FIX (v10.11): Final, robust number parsing for regional formats.
             const parseNumber = (val) => {
                 if (typeof val === 'number') return val;
                 if (typeof val !== 'string' || !val) return 0;
-                const cleanVal = val.replace(/[^0-9,.-]/g, '').replace(',', '.');
-                const num = parseFloat(cleanVal);
+
+                // Remove currency symbols, spaces, and all thousand separators (dots or commas)
+                const cleanStr = val.trim()
+                    .replace(/[$,₡\s]/g, '')
+                    .replace(/\.(?=.*\.)/g, '') // Remove all dots except the last one if any
+                    .replace(',', '.'); // Standardize decimal separator to a dot
+
+                const num = parseFloat(cleanStr);
                 return isNaN(num) ? 0 : num;
             };
 
@@ -585,7 +591,6 @@
             function populateFormDropdowns() {
                 const populate = (select, data = [], textFn, valueFn) => {
                     select.innerHTML = '<option value="">Seleccione...</option>';
-                    // ARCHITECTURAL FIX (v10.10): Remove manually added "0%" to prevent duplicates.
                     data.forEach(item => {
                         const option = document.createElement('option');
                         option.textContent = textFn(item);
@@ -662,7 +667,6 @@
                 
                 const montoTotal$ = selectedService ? parseNumber(selectedService.Precio) : 0;
                 
-                // ARCHITECTURAL FIX (v10.10): Removed ambiguous discount normalization. The select value is trusted.
                 const descuento = parseNumber(formFields.descuento.value);
 
                 const tipoCambio = parseNumber(formFields.tipoCambio.value);
@@ -930,6 +934,8 @@
     </script>
 </body>
 </html>
+
+
 
 
 
