@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Exámenes - Control de Estudios</title>
     
+    <!-- ARCHITECTURAL FIX (v10.9): Add Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%231e3a8a%22></rect><path d=%22M30 70 V 30 H 40 V 70 Z M 50 70 V 50 H 60 V 70 Z M 70 70 V 40 H 80 V 70 Z%22 fill=%22%2314b8a6%22></path></svg>">
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -146,8 +149,11 @@
             margin-bottom: 0.5rem;
             display: block;
         }
+        /* ARCHITECTURAL FIX (v10.9): Make total amount font size responsive to prevent overflow. */
         .total-amount {
-            font-size: clamp(1.5rem, 5vw, 2.25rem);
+            font-size: clamp(1.25rem, 5vw, 2.25rem);
+            overflow-wrap: break-word;
+            hyphens: auto;
         }
     </style>
 </head>
@@ -444,7 +450,7 @@
             const parseNumber = (val) => {
                 if (typeof val === 'number') return val;
                 if (typeof val !== 'string' || !val) return 0;
-                const cleanVal = val.replace(/[^0-9,-]/g, '').replace(',', '.');
+                const cleanVal = val.replace(/[^0-9,.-]/g, '').replace(',', '.');
                 const num = parseFloat(cleanVal);
                 return isNaN(num) ? 0 : num;
             };
@@ -581,6 +587,13 @@
             function populateFormDropdowns() {
                 const populate = (select, data = [], textFn, valueFn) => {
                     select.innerHTML = '<option value="">Seleccione...</option>';
+                    // ARCHITECTURAL FIX (v10.9): Add a zero discount option if it doesn't exist.
+                    if (select.id === 'descuento') {
+                        const zeroOption = document.createElement('option');
+                        zeroOption.textContent = '0%';
+                        zeroOption.value = '0';
+                        select.appendChild(zeroOption);
+                    }
                     data.forEach(item => {
                         const option = document.createElement('option');
                         option.textContent = textFn(item);
@@ -656,7 +669,13 @@
                 const selectedMedicoReporta = appState.data.medicos.find(m => m.Medico === formFields.medicoReporta.value);
                 
                 const montoTotal$ = selectedService ? parseNumber(selectedService.Precio) : 0;
-                const descuento = parseNumber(formFields.descuento.value);
+                
+                // ARCHITECTURAL FIX (v10.9): Robust discount normalization.
+                let descuento = parseNumber(formFields.descuento.value);
+                if (descuento >= 1) { // Handles cases like entering "10" for 10%
+                    descuento = descuento / 100;
+                }
+
                 const tipoCambio = parseNumber(formFields.tipoCambio.value);
                 const ivaPercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.IVA) : 0;
                 const feePercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.Fees) : 0;
@@ -871,7 +890,6 @@
                     formFields.tipoEstudio.value = cita['Tipo de Estudio'];
                     formFields.medicoRefiere.value = cita['Medico que Refiere'];
                     formFields.medicoReporta.value = cita['Medico que Reporta'];
-                    // ARCHITECTURAL FIX (v10.8): Use parsePercent for discount value when it's a percentage string from the sheet.
                     formFields.descuento.value = parsePercent(cita.Descuento);
                     formFields.metodoPago.value = cita['Método pago'];
                     formFields.tipoCambio.value = parseNumber(cita['Tipo de cambio']);
@@ -923,4 +941,3 @@
     </script>
 </body>
 </html>
-
