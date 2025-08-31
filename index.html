@@ -894,10 +894,14 @@
                     formFields.medicoRefiere.value = cita['Medico que Refiere'];
                     formFields.medicoReporta.value = cita['Medico que Reporta'];
                     
-                    // ARCHITECTURAL FIX (v1.6): Se fuerza la conversión a String para asegurar
-                    // la coincidencia exacta con el 'value' de las opciones del <select>,
-                    // resolviendo el bug de carga.
-                    formFields.descuento.value = String(parseNumber(cita.Descuento));
+                    // ARCHITECTURAL FIX (v1.7): Solución definitiva para el descuento.
+                    // Se crea una variable que normaliza el valor guardado (sea "10%" o 0.1)
+                    // a un formato decimal consistente (0.1) antes de asignarlo.
+                    let discountValueToLoad = cita.Descuento;
+                    if (typeof discountValueToLoad === 'string' && discountValueToLoad.includes('%')) {
+                        discountValueToLoad = parsePercent(discountValueToLoad);
+                    }
+                    formFields.descuento.value = discountValueToLoad;
 
                     formFields.metodoPago.value = cita['Método pago'];
                     formFields.tipoCambio.value = parseNumber(cita['Tipo de cambio']);
@@ -949,6 +953,12 @@
     </script>
 </body>
 </html>
+
+
+
+
+
+
 
 
 
