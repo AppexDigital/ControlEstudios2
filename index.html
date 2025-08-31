@@ -441,11 +441,9 @@
             // =================================================================================
             const parsePercent = (val) => parseFloat(String(val).replace('%', '')) / 100 || 0;
             
-            // ARCHITECTURAL FIX (v10.6): Simplified, direct number parsing.
             const parseNumber = (val) => {
                 if (typeof val === 'number') return val;
                 if (typeof val !== 'string' || !val) return 0;
-                // Aggressively clean the string, standardize decimal separator to '.', then parse.
                 const cleanVal = val.replace(/[^0-9,-]/g, '').replace(',', '.');
                 const num = parseFloat(cleanVal);
                 return isNaN(num) ? 0 : num;
@@ -523,7 +521,6 @@
                 showView('registrar');
             }
 
-            // ARCHITECTURAL FIX (v10.6): Corrected password check for hardcoded admin.
             const handleLogin = async (event) => {
                 event.preventDefault();
                 loginError.classList.add('hidden');
@@ -534,7 +531,8 @@
                 const username = loginForm.username.value;
                 const password = loginForm.password.value;
 
-                if (username.toLowerCase() === 'admin' && password === 'admin') { // Password changed to lowercase 'admin'
+                // ARCHITECTURAL FIX (v10.7): Make hardcoded user login case-insensitive and truly offline first.
+                if (username.toLowerCase() === 'admin' && password.toLowerCase() === 'admin') { 
                     appState.currentUser = { Usuario: 'Admin', Rol: 'Admin' };
                     
                     initializeApp(true); 
@@ -874,8 +872,8 @@
                     formFields.tipoEstudio.value = cita['Tipo de Estudio'];
                     formFields.medicoRefiere.value = cita['Medico que Refiere'];
                     formFields.medicoReporta.value = cita['Medico que Reporta'];
-                    // ARCHITECTURAL FIX (v10.6): Use parsePercent for discount value from sheet.
-                    formFields.descuento.value = parsePercent(cita.Descuento);
+                    // ARCHITECTURAL FIX (v10.7): Use parseNumber on discount from sheet as it's a decimal.
+                    formFields.descuento.value = parseNumber(cita.Descuento);
                     formFields.metodoPago.value = cita['Método pago'];
                     formFields.tipoCambio.value = parseNumber(cita['Tipo de cambio']);
                     formFields.enviado.checked = cita.Enviado && cita.Enviado.toLowerCase() === 'si';
@@ -926,11 +924,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
