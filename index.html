@@ -441,29 +441,12 @@
             // =================================================================================
             const parsePercent = (val) => parseFloat(String(val).replace('%', '')) / 100 || 0;
             
-            // ARCHITECTURAL FIX (v10.5): A highly robust, locale-agnostic number parsing function.
+            // ARCHITECTURAL FIX (v10.6): Simplified, direct number parsing.
             const parseNumber = (val) => {
                 if (typeof val === 'number') return val;
                 if (typeof val !== 'string' || !val) return 0;
-
-                // Standardize the number string.
-                // 1. Find the last dot or comma. This is the most likely decimal separator.
-                const lastDot = val.lastIndexOf('.');
-                const lastComma = val.lastIndexOf(',');
-                
-                let cleanVal = val;
-
-                if (lastComma > lastDot) { // Comma is the decimal separator (e.g., 1.234,56)
-                    cleanVal = val.replace(/\./g, '').replace(',', '.');
-                } else if (lastDot > lastComma) { // Dot is the decimal separator (e.g., 1,234.56)
-                    cleanVal = val.replace(/,/g, '');
-                } else { // No separators or only one type
-                     cleanVal = val.replace(/,/g, '.');
-                }
-
-                // Remove anything that is not a digit or a decimal point
-                cleanVal = cleanVal.replace(/[^\d.-]/g, '');
-                
+                // Aggressively clean the string, standardize decimal separator to '.', then parse.
+                const cleanVal = val.replace(/[^0-9,-]/g, '').replace(',', '.');
                 const num = parseFloat(cleanVal);
                 return isNaN(num) ? 0 : num;
             };
@@ -540,7 +523,7 @@
                 showView('registrar');
             }
 
-            // ARCHITECTURAL FIX (v10.5): Reworked login flow for true offline admin access.
+            // ARCHITECTURAL FIX (v10.6): Corrected password check for hardcoded admin.
             const handleLogin = async (event) => {
                 event.preventDefault();
                 loginError.classList.add('hidden');
@@ -551,16 +534,14 @@
                 const username = loginForm.username.value;
                 const password = loginForm.password.value;
 
-                if (username.toLowerCase() === 'admin' && password === 'Admin') {
+                if (username.toLowerCase() === 'admin' && password === 'admin') { // Password changed to lowercase 'admin'
                     appState.currentUser = { Usuario: 'Admin', Rol: 'Admin' };
                     
-                    // Grant access first, then try to connect.
-                    initializeApp(true); // Initialize in a temporary offline state.
+                    initializeApp(true); 
 
                     const online = await fetchData();
                     if (online) {
-                        // If connection succeeds, refresh with real data.
-                        roleDisplay.textContent = `Rol: ${appState.currentUser.Rol}`; // Remove offline tag
+                        roleDisplay.textContent = `Rol: ${appState.currentUser.Rol}`;
                         populateFormDropdowns();
                         renderCitasTable(appState.data.citas);
                     } else {
@@ -893,8 +874,8 @@
                     formFields.tipoEstudio.value = cita['Tipo de Estudio'];
                     formFields.medicoRefiere.value = cita['Medico que Refiere'];
                     formFields.medicoReporta.value = cita['Medico que Reporta'];
-                    // ARCHITECTURAL FIX (v10.5): Use robust parseNumber instead of parsePercent.
-                    formFields.descuento.value = parseNumber(cita.Descuento);
+                    // ARCHITECTURAL FIX (v10.6): Use parsePercent for discount value from sheet.
+                    formFields.descuento.value = parsePercent(cita.Descuento);
                     formFields.metodoPago.value = cita['Método pago'];
                     formFields.tipoCambio.value = parseNumber(cita['Tipo de cambio']);
                     formFields.enviado.checked = cita.Enviado && cita.Enviado.toLowerCase() === 'si';
