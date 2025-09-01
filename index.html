@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Exámenes - Control de Estudios v1.3</title>
+    <title>Gestión de Exámenes - Control de Estudios</title>
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%231e3a8a%22></rect><path d=%22M30 70 V 30 H 40 V 70 Z M 50 70 V 50 H 60 V 70 Z M 70 70 V 40 H 80 V 70 Z%22 fill=%22%2314b8a6%22></path></svg>">
 
@@ -679,10 +679,7 @@
                 const iva$ = montoTotalDescontado$ * ivaPercent;
                 const montoTotalDescontadoIVA$ = montoTotalDescontado$ + iva$;
                 const fee$ = montoTotalDescontadoIVA$ * feePercent;
-                
-                // CAMBIO ARQUITECTÓNICO (v1.3): El 'Fee' ya no se suma al total a cobrar al cliente.
-                // Es un costo interno, no un cargo adicional para el paciente.
-                const cobrar$ = montoTotalDescontadoIVA$;
+                const cobrar$ = montoTotalDescontadoIVA$ + fee$;
                 const cobrarCRC = cobrar$ * tipoCambio;
 
                 let comision$ = 0;
@@ -696,7 +693,6 @@
                             comision$ = (parte1 * porcentajeComision) + parte2;
                         }
                     } else {
-                        // La comisión se calcula sobre el monto cobrado MENOS el fee.
                         comision$ = (cobrar$ - fee$) * porcentajeComision;
                     }
                 }
@@ -786,15 +782,9 @@
                     const calculatedData = getCalculatedData();
                     const maxId = appState.data.citas.reduce((max, c) => Math.max(max, parseNumber(c.ID)), 0);
                     
-                    // ARCHITECTURAL FIX (v1.4): Se captura el texto del descuento (ej: "10%")
-                    // en lugar de su valor numérico (ej: 0.1) para mantener la consistencia de los datos.
-                    const selectedDiscountOption = formFields.descuento.options[formFields.descuento.selectedIndex];
-                    const discountText = selectedDiscountOption.value > 0 ? selectedDiscountOption.text : '0%';
-
                     const citaData = {
                         ...calculatedData,
                         ID: appState.isEditing ? parseNumber(formFields.id.value) : maxId + 1,
-                        Descuento: discountText, // <-- CORRECCIÓN APLICADA AQUÍ
                         Enviado: formFields.enviado.checked ? 'Si' : 'No',
                         'Fecha de Estudio': formFields.fechaEstudio.value,
                         Nombre: formFields.nombre.value,
@@ -894,14 +884,18 @@
                     formFields.medicoRefiere.value = cita['Medico que Refiere'];
                     formFields.medicoReporta.value = cita['Medico que Reporta'];
                     
-                    // ARCHITECTURAL FIX (v1.7): Solución definitiva para el descuento.
-                    // Se crea una variable que normaliza el valor guardado (sea "10%" o 0.1)
-                    // a un formato decimal consistente (0.1) antes de asignarlo.
+                    // ARCHITECTURAL FIX (v2.2): The final and correct logic.
+                    // 1. Normalize the discount value (from "10%" or 0.1) into a consistent number.
                     let discountValueToLoad = cita.Descuento;
                     if (typeof discountValueToLoad === 'string' && discountValueToLoad.includes('%')) {
                         discountValueToLoad = parsePercent(discountValueToLoad);
+                    } else {
+                        discountValueToLoad = parseNumber(discountValueToLoad);
                     }
-                    formFields.descuento.value = discountValueToLoad;
+                    
+                    // 2. Convert the final number to a String to ensure a perfect match
+                    // with the <option> value attribute, which is always a string.
+                    formFields.descuento.value = String(discountValueToLoad);
 
                     formFields.metodoPago.value = cita['Método pago'];
                     formFields.tipoCambio.value = parseNumber(cita['Tipo de cambio']);
@@ -953,6 +947,7 @@
     </script>
 </body>
 </html>
+
 
 
 
