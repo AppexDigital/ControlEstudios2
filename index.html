@@ -488,13 +488,16 @@
             // UTILITY & DATA FUNCTIONS
             // =================================================================================
             const parsePercent = (val) => parseFloat(String(val).replace('%', '')) / 100 || 0;
+            
             const parseNumber = (val) => {
                 if (typeof val === 'number') return val;
                 if (typeof val !== 'string' || !val) return 0;
-                const cleanStr = val.trim().replace(/[$,₡\s]/g, '').replace(/\.(?=.*\.)/g, '').replace(',', '.');
+                // ARCHITECTURAL FIX (v12.8): Robust number parsing for both dot and comma decimal separators.
+                const cleanStr = val.trim().replace(/[$,₡\s]/g, '').replace(',', '.');
                 const num = parseFloat(cleanStr);
                 return isNaN(num) ? 0 : num;
             };
+
             const formatUSD = (num) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
             const formatCRC = (num) => new Intl.NumberFormat('es-CR', { style: 'currency', currency: 'CRC' }).format(num);
             const showLoader = (show) => loader.classList.toggle('hidden', !show);
@@ -983,7 +986,7 @@
                     formFields.tipoEstudio.value = cita['Tipo de Estudio'];
                     formFields.medicoRefiere.value = cita['Medico que Refiere'];
                     formFields.medicoReporta.value = cita['Medico que Reporta'];
-                    formFields.descuento.value = parseNumber(cita.Descuento); // FIX: Changed from parsePercent to parseNumber
+                    formFields.descuento.value = parseNumber(cita.Descuento);
                     formFields.metodoPago.value = cita['Método pago'];
                     formFields.tipoCambio.value = parseNumber(cita['Tipo de cambio']);
                     formFields.enviado.checked = cita.Enviado && cita.Enviado.toLowerCase() === 'si';
@@ -1011,4 +1014,5 @@
     </script>
 </body>
 </html>
+
 
