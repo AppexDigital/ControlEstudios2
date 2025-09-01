@@ -883,20 +883,7 @@
                     formFields.tipoEstudio.value = cita['Tipo de Estudio'];
                     formFields.medicoRefiere.value = cita['Medico que Refiere'];
                     formFields.medicoReporta.value = cita['Medico que Reporta'];
-                    
-                    // ARCHITECTURAL FIX (v2.2): The final and correct logic.
-                    // 1. Normalize the discount value (from "10%" or 0.1) into a consistent number.
-                    let discountValueToLoad = cita.Descuento;
-                    if (typeof discountValueToLoad === 'string' && discountValueToLoad.includes('%')) {
-                        discountValueToLoad = parsePercent(discountValueToLoad);
-                    } else {
-                        discountValueToLoad = parseNumber(discountValueToLoad);
-                    }
-                    
-                    // 2. Convert the final number to a String to ensure a perfect match
-                    // with the <option> value attribute, which is always a string.
-                    formFields.descuento.value = String(discountValueToLoad);
-
+                    formFields.descuento.value = parsePercent(cita.Descuento);
                     formFields.metodoPago.value = cita['Método pago'];
                     formFields.tipoCambio.value = parseNumber(cita['Tipo de cambio']);
                     formFields.enviado.checked = cita.Enviado && cita.Enviado.toLowerCase() === 'si';
