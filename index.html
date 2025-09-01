@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Exámenes - Control de Estudios v1.3</title>
+    <title>Gestión de Exámenes - Control de Estudios v2.0</title>
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%231e3a8a%22></rect><path d=%22M30 70 V 30 H 40 V 70 Z M 50 70 V 50 H 60 V 70 Z M 70 70 V 40 H 80 V 70 Z%22 fill=%22%2314b8a6%22></path></svg>">
 
@@ -375,11 +375,49 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // =================================================================================
-            // STATE & CONFIG
+            // MOCK DATABASE & CONFIG
             // =================================================================================
+            const mockDatabase = {
+                usuarios: [
+                    { Usuario: 'Admin', Contraseña: 'Admin', Rol: 'Admin' },
+                    { Usuario: 'userExamen', Contraseña: '123', Rol: 'Examenes' },
+                    { Usuario: 'userImagen', Contraseña: '123', Rol: 'Imagenes' }
+                ],
+                servicios: [
+                    { Código: 'RX', 'Producto o Servicio': 'RX CRANEO SIMPLE', Precio: '$50.00', Cobro: 'Normal' },
+                    { Código: 'RX', 'Producto o Servicio': 'RX TORAX PA', Precio: '$60.00', Cobro: 'Normal' },
+                    { Código: 'RX', 'Producto o Servicio': 'RX ABDOMEN SIMPLE', Precio: '$70.00', Cobro: 'Normal' },
+                    { Código: 'DMO', 'Producto o Servicio': 'DMO 1 REGION', Precio: '$80.00', Cobro: 'Normal' },
+                    { Código: 'DMO', 'Producto o Servicio': 'DMO 2 REGIONES', Precio: '$90.00', Cobro: 'Normal' },
+                    { Código: 'MMG', 'Producto o Servicio': 'MMG BILATERAL', Precio: '$100.00', Cobro: 'Especial', 'Base para comisión': '$80', 'Moto a pagar': '$20' },
+                    { Código: 'MMG', 'Producto o Servicio': 'MMG UNILATERAL', Precio: '$110.00', Cobro: 'Normal' },
+                ],
+                medicos: [
+                    { Medico: 'Mario Rojas', Comisión: '10%' },
+                    { Medico: 'Oscar Mora', Comisión: '15%' },
+                    { Medico: 'Ana Perez', Comisión: '12%' },
+                ],
+                metodosDePago: [
+                    { Tipo: 'Tarjeta Credito', IVA: '13%', Fees: '2.5%' },
+                    { Tipo: 'Efectivo', IVA: '4%', Fees: '0%' },
+                    { Tipo: 'SINPE', IVA: '4%', Fees: '0%' },
+                ],
+                descuentos: [
+                    { Descuentos: '0%' },
+                    { Descuentos: '5%' },
+                    { Descuentos: '10%' },
+                    { Descuentos: '15%' },
+                    { Descuentos: '20%' },
+                ],
+                citas: [
+                    { ID: 1, Enviado: 'Si', 'Fecha de Estudio': '2025-08-28', Nombre: 'Carlos Ramirez', Identificación: '1-1234-5678', Especialidad: 'RX', 'Tipo de Estudio': 'RX TORAX PA', 'Medico que Refiere': 'Ana Perez', 'Medico que Reporta': 'Oscar Mora', 'Monto Total': 60, Descuento: '10%', 'Descuento aplicado por': 'userImagen', 'Monto Total Descontado': 54, 'Método pago': 'Tarjeta Credito', IVA: 7.02, Fee: 1.5255, 'Monto total Descontado con IVA': 61.02, 'Tipo de cambio': 520, 'Cobrar ₡': 31730.4, 'Cobrar $': 61.02, 'Porcentaje de comisión': 0.15, 'Comisión en Colones': 4641.378, 'Comisión en Dólares': 8.925725, 'Debito Fiscal': 7.02, 'Crédito Fiscal': 0.343297115, 'IVA Pagado a Hacienda': 6.676702885, 'Usuario que registra': 'userImagen' },
+                    { ID: 2, Enviado: 'No', 'Fecha de Estudio': '2025-08-29', Nombre: 'Elena Solano', Identificación: '2-0987-6543', Especialidad: 'MMG', 'Tipo de Estudio': 'MMG BILATERAL', 'Medico que Refiere': 'Mario Rojas', 'Medico que Reporta': 'Mario Rojas', 'Monto Total': 100, Descuento: '0%', 'Descuento aplicado por': '', 'Monto Total Descontado': 100, 'Método pago': 'Efectivo', IVA: 4, Fee: 0, 'Monto total Descontado con IVA': 104, 'Tipo de cambio': 520, 'Cobrar ₡': 54080, 'Cobrar $': 104, 'Porcentaje de comisión': 0.1, 'Comisión en Colones': 5408, 'Comisión en Dólares': 10.4, 'Debito Fiscal': 4, 'Crédito Fiscal': 0.4, 'IVA Pagado a Hacienda': 3.6, 'Usuario que registra': 'userExamen' },
+                ]
+            };
+            
             const appState = {
                 currentUser: null,
-                data: { usuarios: [], servicios: [], medicos: [], metodosDePago: [], descuentos: [], citas: [] },
+                data: {},
                 isEditing: false,
                 isViewing: false,
                 listenersAttached: false
@@ -443,83 +481,27 @@
             // UTILITY FUNCTIONS
             // =================================================================================
             const parsePercent = (val) => parseFloat(String(val).replace('%', '')) / 100 || 0;
-            
-            // ARCHITECTURAL FIX (v10.11): Final, robust number parsing for regional formats.
             const parseNumber = (val) => {
                 if (typeof val === 'number') return val;
                 if (typeof val !== 'string' || !val) return 0;
-
-                // Remove currency symbols, spaces, and all thousand separators (dots or commas)
-                const cleanStr = val.trim()
-                    .replace(/[$,₡\s]/g, '')
-                    .replace(/\.(?=.*\.)/g, '') // Remove all dots except the last one if any
-                    .replace(',', '.'); // Standardize decimal separator to a dot
-
+                const cleanStr = val.trim().replace(/[$,₡\s]/g, '').replace(',', '.');
                 const num = parseFloat(cleanStr);
                 return isNaN(num) ? 0 : num;
             };
-
             const formatUSD = (num) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
             const formatCRC = (num) => new Intl.NumberFormat('es-CR', { style: 'currency', currency: 'CRC' }).format(num);
             const showLoader = (show) => loader.classList.toggle('hidden', !show);
 
-            async function apiCall(endpoint, options = {}, timeout = 15000) {
-                const controller = new AbortController();
-                const id = setTimeout(() => controller.abort(), timeout);
-                
-                const newOptions = {
-                    ...options,
-                    headers: { 'Content-Type': 'application/json', ...options.headers },
-                    signal: controller.signal
-                };
-
-                try {
-                    const response = await fetch(endpoint, newOptions);
-                    if (!response.ok) {
-                        const errorBody = await response.json().catch(() => ({ error: response.statusText }));
-                        throw new Error(errorBody.error || 'Respuesta no exitosa del servidor.');
-                    }
-                    if (response.status === 204 || response.headers.get('content-length') === '0') {
-                        return {};
-                    }
-                    return response.json();
-                } catch (error) {
-                    if (error.name === 'AbortError') throw new Error('La petición tardó demasiado y fue cancelada.');
-                    throw error;
-                } finally {
-                    clearTimeout(id);
-                }
-            }
-            
-            async function fetchData() {
-                showLoader(true);
-                try {
-                    appState.data = await apiCall('/.netlify/functions/get-data', { method: 'GET' });
-                    return true;
-                } catch (error) {
-                    console.error("Error al obtener datos:", error.message);
-                    loginError.textContent = 'Fallo de conexión con la base de datos.';
-                    loginError.classList.remove('hidden');
-                    return false;
-                } finally {
-                    showLoader(false);
-                }
-            }
-
             // =================================================================================
             // APPLICATION LOGIC (LOGIN, NAVIGATION, RENDERING)
             // =================================================================================
-            
-            function initializeApp(isOffline = false) {
+            function initializeApp() {
+                appState.data = mockDatabase; // Using mock data
                 loginScreen.style.display = 'none';
                 appScreen.style.display = 'flex';
                 userDisplay.textContent = appState.currentUser.Usuario;
                 roleDisplay.textContent = `Rol: ${appState.currentUser.Rol}`;
                 
-                if(isOffline){
-                    roleDisplay.textContent += ' (Modo Offline)';
-                }
-
                 populateFormDropdowns();
                 renderCitasTable(appState.data.citas);
                 
@@ -531,44 +513,20 @@
                 showView('registrar');
             }
 
-            const handleLogin = async (event) => {
+            const handleLogin = (event) => {
                 event.preventDefault();
                 loginError.classList.add('hidden');
-                const submitButton = loginForm.querySelector('button[type="submit"]');
-                submitButton.disabled = true;
-                submitButton.textContent = 'Verificando...';
-                
                 const username = loginForm.username.value;
                 const password = loginForm.password.value;
-
-                if (username.toLowerCase() === 'admin' && password.toLowerCase() === 'admin') { 
-                    appState.currentUser = { Usuario: 'Admin', Rol: 'Admin' };
-                    
-                    initializeApp(true); 
-
-                    const online = await fetchData();
-                    if (online) {
-                        roleDisplay.textContent = `Rol: ${appState.currentUser.Rol}`;
-                        populateFormDropdowns();
-                        renderCitasTable(appState.data.citas);
-                    } else {
-                        alert('No se pudo conectar al servidor. La aplicación permanecerá en modo offline.');
-                    }
-
+                
+                const foundUser = mockDatabase.usuarios.find(u => u.Usuario === username && u.Contraseña === password);
+                if (foundUser) {
+                    appState.currentUser = foundUser;
+                    initializeApp();
                 } else {
-                    if (await fetchData()) {
-                        const foundUser = appState.data.usuarios.find(u => u.Usuario === username && u.Contraseña === password);
-                        if (foundUser) {
-                            appState.currentUser = foundUser;
-                            initializeApp(false);
-                        } else {
-                            loginError.textContent = 'Usuario o contraseña incorrectos.';
-                            loginError.classList.remove('hidden');
-                        }
-                    }
+                    loginError.textContent = 'Usuario o contraseña incorrectos.';
+                    loginError.classList.remove('hidden');
                 }
-                submitButton.disabled = false;
-                submitButton.textContent = 'Ingresar';
             };
 
             const handleLogout = () => {
@@ -666,22 +624,17 @@
                 const selectedMedicoReporta = appState.data.medicos.find(m => m.Medico === formFields.medicoReporta.value);
                 
                 const montoTotal$ = selectedService ? parseNumber(selectedService.Precio) : 0;
-                
                 const descuento = parseNumber(formFields.descuento.value);
-
                 const tipoCambio = parseNumber(formFields.tipoCambio.value);
                 const ivaPercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.IVA) : 0;
                 const feePercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.Fees) : 0;
                 const porcentajeComision = selectedMedicoReporta ? parsePercent(selectedMedicoReporta.Comisión) : 0;
-                const tasaIVAMedico = 0.04;
 
                 const montoTotalDescontado$ = montoTotal$ * (1 - descuento);
                 const iva$ = montoTotalDescontado$ * ivaPercent;
                 const montoTotalDescontadoIVA$ = montoTotalDescontado$ + iva$;
                 const fee$ = montoTotalDescontadoIVA$ * feePercent;
                 
-                // CAMBIO ARQUITECTÓNICO (v1.3): El 'Fee' ya no se suma al total a cobrar al cliente.
-                // Es un costo interno, no un cargo adicional para el paciente.
                 const cobrar$ = montoTotalDescontadoIVA$;
                 const cobrarCRC = cobrar$ * tipoCambio;
 
@@ -691,16 +644,16 @@
                         const baseComision = parseNumber(selectedService['Base para comisión']);
                         const montoPagar = parseNumber(selectedService['Moto a pagar']);
                         if (montoTotal$ > 0) {
-                            const parte1 = ((baseComision * (1 - descuento)) * (1 + tasaIVAMedico)) - ((baseComision / montoTotal$) * fee$);
-                            const parte2 = ((montoPagar * (1 - descuento)) * (1 + tasaIVAMedico)) - ((montoPagar / montoTotal$) * fee$);
+                            const parte1 = (baseComision * (1 - descuento)) - ((baseComision / montoTotal$) * fee$);
+                            const parte2 = (montoPagar * (1 - descuento)) - ((montoPagar / montoTotal$) * fee$);
                             comision$ = (parte1 * porcentajeComision) + parte2;
                         }
                     } else {
-                        // La comisión se calcula sobre el monto cobrado MENOS el fee.
                         comision$ = (cobrar$ - fee$) * porcentajeComision;
                     }
                 }
                 const comisionCRC = comision$ * tipoCambio;
+                const tasaIVAMedico = 0.04;
                 const debitoFiscal = iva$;
                 const creditoFiscal = (comision$ / (1 + tasaIVAMedico)) * tasaIVAMedico;
                 const ivaPagadoHacienda = debitoFiscal - creditoFiscal;
@@ -769,7 +722,7 @@
                 });
             }
             
-            async function handleFormSubmit(event) {
+            function handleFormSubmit(event) {
                 event.preventDefault();
                 if (appState.isViewing) return;
 
@@ -779,22 +732,14 @@
 
                 try {
                     const activeEspecialidadBtn = formFields.especialidadContainer.querySelector('.active');
-                    if (!activeEspecialidadBtn) {
-                        throw new Error('Por favor, seleccione un tipo de estudio.');
-                    }
-
-                    const calculatedData = getCalculatedData();
-                    const maxId = appState.data.citas.reduce((max, c) => Math.max(max, parseNumber(c.ID)), 0);
+                    if (!activeEspecialidadBtn) throw new Error('Por favor, seleccione un tipo de estudio.');
                     
-                    // ARCHITECTURAL FIX (v1.4): Se captura el texto del descuento (ej: "10%")
-                    // en lugar de su valor numérico (ej: 0.1) para mantener la consistencia de los datos.
+                    const calculatedData = getCalculatedData();
                     const selectedDiscountOption = formFields.descuento.options[formFields.descuento.selectedIndex];
                     const discountText = selectedDiscountOption.value > 0 ? selectedDiscountOption.text : '0%';
 
-                    const citaData = {
+                    const newCita = {
                         ...calculatedData,
-                        ID: appState.isEditing ? parseNumber(formFields.id.value) : maxId + 1,
-                        Descuento: discountText, // <-- CORRECCIÓN APLICADA AQUÍ
                         Enviado: formFields.enviado.checked ? 'Si' : 'No',
                         'Fecha de Estudio': formFields.fechaEstudio.value,
                         Nombre: formFields.nombre.value,
@@ -805,15 +750,22 @@
                         'Medico que Reporta': formFields.medicoReporta.value,
                         'Método pago': formFields.metodoPago.value,
                         'Descuento aplicado por': (calculatedData.Descuento > 0) ? appState.currentUser.Usuario : '',
+                        'Usuario que registra': appState.currentUser.Usuario,
+                        Descuento: discountText,
                     };
-                    
-                    const payload = { ...citaData, tipoEstudio: citaData.Especialidad };
-                    const endpoint = appState.isEditing ? '/.netlify/functions/update-cita' : '/.netlify/functions/add-cita';
-                    const method = appState.isEditing ? 'PUT' : 'POST';
 
-                    await apiCall(endpoint, { method, body: JSON.stringify(payload) });
+                    if (appState.isEditing) {
+                        const index = appState.data.citas.findIndex(c => String(c.ID) === String(formFields.id.value));
+                        if (index !== -1) {
+                            const originalCita = appState.data.citas[index];
+                            appState.data.citas[index] = { ...originalCita, ...newCita, ID: originalCita.ID };
+                        }
+                    } else {
+                        const maxId = appState.data.citas.reduce((max, c) => Math.max(max, parseNumber(c.ID)), 0);
+                        newCita.ID = maxId + 1;
+                        appState.data.citas.push(newCita);
+                    }
 
-                    await fetchData();
                     renderCitasTable(appState.data.citas);
                     resetForm();
                     showView('consultar');
@@ -894,15 +846,21 @@
                     formFields.medicoRefiere.value = cita['Medico que Refiere'];
                     formFields.medicoReporta.value = cita['Medico que Reporta'];
                     
-                    // ARCHITECTURAL FIX (v1.8): Solución definitiva y robustecida.
-                    // Se normaliza el valor del descuento a un número decimal (ej: 0.1)
-                    // y luego se convierte a String para garantizar una coincidencia exacta
-                    // con el atributo 'value' de la opción del select.
-                    let discountValueToLoad = cita.Descuento;
-                    if (typeof discountValueToLoad === 'string' && discountValueToLoad.includes('%')) {
-                        discountValueToLoad = parsePercent(discountValueToLoad);
+                    // ARCHITECTURAL FIX (v2.0): Final and correct logic.
+                    // 1. Get the raw discount value.
+                    const rawDiscount = cita.Descuento;
+                    let numericDiscountValue = 0;
+
+                    // 2. Normalize the value to a number, handling both "10%" and 0.1 formats.
+                    if (typeof rawDiscount === 'string' && rawDiscount.includes('%')) {
+                        numericDiscountValue = parsePercent(rawDiscount);
+                    } else {
+                        numericDiscountValue = parseNumber(rawDiscount);
                     }
-                    formFields.descuento.value = String(discountValueToLoad);
+                    
+                    // 3. Assign the normalized numeric value directly to the select element.
+                    // The browser will match this to the correct <option value="...">.
+                    formFields.descuento.value = numericDiscountValue;
 
                     formFields.metodoPago.value = cita['Método pago'];
                     formFields.tipoCambio.value = parseNumber(cita['Tipo de cambio']);
@@ -925,24 +883,13 @@
                 showView('registrar');
             }
             
-            async function handleDeleteClick(citaId) {
+            function handleDeleteClick(citaId) {
                 if (!confirm(`¿Está seguro de que desea eliminar el registro ID: ${citaId}?`)) return;
-                const cita = appState.data.citas.find(c => String(c.ID) === String(citaId));
-                if (!cita) return;
-
-                showLoader(true);
-                try {
-                    const payload = { ID: cita.ID, tipoEstudio: cita.Especialidad };
-                    await apiCall('/.netlify/functions/delete-cita', { method: 'DELETE', body: JSON.stringify(payload) });
-                    
-                    await fetchData();
+                const index = appState.data.citas.findIndex(c => String(c.ID) === String(citaId));
+                if (index > -1) {
+                    appState.data.citas.splice(index, 1);
                     renderCitasTable(appState.data.citas);
-                    alert('Registro eliminado con éxito.');
-                } catch (error) {
-                    console.error('Delete Error:', error);
-                    alert(`No se pudo eliminar el registro: ${error.message}`);
-                } finally {
-                    showLoader(false);
+                    alert('Registro eliminado (simulado).');
                 }
             }
 
@@ -954,6 +901,8 @@
     </script>
 </body>
 </html>
+
+
 
 
 
