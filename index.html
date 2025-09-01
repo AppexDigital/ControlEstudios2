@@ -28,6 +28,8 @@
             --color-text-primary: #1e293b; /* Texto principal (Slate-800) */
             --color-text-secondary: #64748b;/* Texto secundario (Slate-500) */
             --color-border: #e2e8f0;      /* Bordes sutiles (Slate-200) */
+            --color-success: #10b981;     /* Verde (Emerald-500) */
+            --color-error: #ef4444;       /* Rojo (Red-500) */
         }
         html, body {
             height: 100%;
@@ -152,9 +154,50 @@
             font-size: clamp(1.1rem, 4vw, 2rem);
             white-space: nowrap;
         }
+        
+        /* Estilos para Notificaciones Toast */
+        #notification-container {
+            position: fixed;
+            bottom: 1.25rem;
+            right: 1.25rem;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            align-items: flex-end;
+        }
+        .toast {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-radius: 0.75rem;
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.4s cubic-bezier(0.21, 1.02, 0.73, 1);
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .toast.hide {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        .toast-success { background-color: var(--color-success); }
+        .toast-error { background-color: var(--color-error); }
+        .toast .material-symbols-outlined {
+            margin-right: 0.75rem;
+            font-size: 1.5rem;
+        }
     </style>
 </head>
 <body>
+    <!-- Contenedor para notificaciones Toast -->
+    <div id="notification-container"></div>
+
     <!-- 1. Pantalla de Login -->
     <div id="login-screen" class="flex items-center justify-center h-full login-background p-4">
         <div class="w-full max-w-md p-10 space-y-8 bg-white rounded-2xl login-card">
@@ -382,6 +425,7 @@
                 data: { usuarios: [], servicios: [], medicos: [], metodosDePago: [], descuentos: [], citas: [] },
                 isEditing: false,
                 isViewing: false,
+                isOffline: false,
                 listenersAttached: false
             };
 
@@ -399,6 +443,7 @@
             const citasTableBody = document.getElementById('citas-table-body');
             const searchInput = document.getElementById('search-input');
             const clearFormBtn = document.getElementById('clear-form-btn');
+            const notificationContainer = document.getElementById('notification-container');
             
             const nav = {
                 registrar: document.getElementById('nav-registrar'),
@@ -440,48 +485,80 @@
             document.body.appendChild(loader);
 
             // =================================================================================
-            // UTILITY FUNCTIONS
+            // UTILITY & DATA FUNCTIONS
             // =================================================================================
             const parsePercent = (val) => parseFloat(String(val).replace('%', '')) / 100 || 0;
-            
-            // ARCHITECTURAL FIX (v10.11): Final, robust number parsing for regional formats.
             const parseNumber = (val) => {
                 if (typeof val === 'number') return val;
                 if (typeof val !== 'string' || !val) return 0;
-
-                // Remove currency symbols, spaces, and all thousand separators (dots or commas)
-                const cleanStr = val.trim()
-                    .replace(/[$,₡\s]/g, '')
-                    .replace(/\.(?=.*\.)/g, '') // Remove all dots except the last one if any
-                    .replace(',', '.'); // Standardize decimal separator to a dot
-
+                const cleanStr = val.trim().replace(/[$,₡\s]/g, '').replace(/\.(?=.*\.)/g, '').replace(',', '.');
                 const num = parseFloat(cleanStr);
                 return isNaN(num) ? 0 : num;
             };
-
             const formatUSD = (num) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
             const formatCRC = (num) => new Intl.NumberFormat('es-CR', { style: 'currency', currency: 'CRC' }).format(num);
             const showLoader = (show) => loader.classList.toggle('hidden', !show);
 
+            function showNotification(message, isError = false) {
+                const toast = document.createElement('div');
+                toast.className = `toast ${isError ? 'toast-error' : 'toast-success'}`;
+                const icon = isError ? 'error' : 'check_circle';
+                toast.innerHTML = `<span class="material-symbols-outlined">${icon}</span> ${message}`;
+                notificationContainer.appendChild(toast);
+                setTimeout(() => toast.classList.add('show'), 10);
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    toast.classList.add('hide');
+                    toast.addEventListener('transitionend', () => toast.remove());
+                }, 4000);
+            }
+
+            const generateUniqueNumericId = () => {
+                const existingIds = new Set(appState.data.citas.map(c => parseNumber(c.ID)));
+                let newId;
+                do {
+                    newId = Math.floor(10000000 + Math.random() * 90000000);
+                } while (existingIds.has(newId));
+                return newId;
+            };
+            
+            const getOfflineMockData = () => {
+                return {
+                    usuarios: [],
+                    servicios: [
+                        { Código: 'RX', 'Producto o Servicio': 'Radiografía de Torax (Demo)', Precio: '50', Cobro: 'Normal' },
+                        { Código: 'DMO', 'Producto o Servicio': 'Densitometría Ósea (Demo)', Precio: '75', Cobro: 'Normal' },
+                        { Código: 'MMG', 'Producto o Servicio': 'Mamografía (Demo)', Precio: '100', Cobro: 'Especial', 'Base para comisión': '80', 'Moto a pagar': '10' }
+                    ],
+                    medicos: [
+                        { Medico: 'Dr. House (Demo)', Comisión: '10%' },
+                        { Medico: 'Dra. Grey (Demo)', Comisión: '15%' }
+                    ],
+                    metodosDePago: [
+                        { Tipo: 'Tarjeta (Demo)', IVA: '4%', Fees: '3%' },
+                        { Tipo: 'Efectivo (Demo)', IVA: '0%', Fees: '0%' }
+                    ],
+                    descuentos: [{ Descuentos: '10%' }, { Descuentos: '20%' }],
+                    citas: [{
+                        ID: 10101010, Nombre: 'Paciente de Prueba (Demo)', 'Fecha de Estudio': new Date().toISOString().split('T')[0],
+                        'Tipo de Estudio': 'Radiografía de Torax (Demo)', 'Medico que Reporta': 'Dr. House (Demo)',
+                        'Monto total Descontado con IVA': '51.5', Enviado: 'No', Especialidad: 'RX', 'Método pago': 'Efectivo (Demo)',
+                        'Descuento': '0.0'
+                    }]
+                };
+            };
+
             async function apiCall(endpoint, options = {}, timeout = 15000) {
                 const controller = new AbortController();
                 const id = setTimeout(() => controller.abort(), timeout);
-                
-                const newOptions = {
-                    ...options,
-                    headers: { 'Content-Type': 'application/json', ...options.headers },
-                    signal: controller.signal
-                };
-
+                const newOptions = { ...options, headers: { 'Content-Type': 'application/json', ...options.headers }, signal: controller.signal };
                 try {
                     const response = await fetch(endpoint, newOptions);
                     if (!response.ok) {
                         const errorBody = await response.json().catch(() => ({ error: response.statusText }));
                         throw new Error(errorBody.error || 'Respuesta no exitosa del servidor.');
                     }
-                    if (response.status === 204 || response.headers.get('content-length') === '0') {
-                        return {};
-                    }
+                    if (response.status === 204 || response.headers.get('content-length') === '0') return {};
                     return response.json();
                 } catch (error) {
                     if (error.name === 'AbortError') throw new Error('La petición tardó demasiado y fue cancelada.');
@@ -497,9 +574,7 @@
                     appState.data = await apiCall('/.netlify/functions/get-data', { method: 'GET' });
                     return true;
                 } catch (error) {
-                    console.error("Error al obtener datos:", error.message);
-                    loginError.textContent = 'Fallo de conexión con la base de datos.';
-                    loginError.classList.remove('hidden');
+                    console.error("Error fetching data:", error.message);
                     return false;
                 } finally {
                     showLoader(false);
@@ -507,22 +582,19 @@
             }
 
             // =================================================================================
-            // APPLICATION LOGIC (LOGIN, NAVIGATION, RENDERING)
+            // APPLICATION LOGIC
             // =================================================================================
             
-            function initializeApp(isOffline = false) {
+            function initializeApp() {
                 loginScreen.style.display = 'none';
                 appScreen.style.display = 'flex';
                 userDisplay.textContent = appState.currentUser.Usuario;
                 roleDisplay.textContent = `Rol: ${appState.currentUser.Rol}`;
-                
-                if(isOffline){
-                    roleDisplay.textContent += ' (Modo Offline)';
+                if (appState.isOffline) {
+                    roleDisplay.textContent += ' (Modo Demo)';
                 }
-
                 populateFormDropdowns();
                 renderCitasTable(appState.data.citas);
-                
                 if (!appState.listenersAttached) {
                     setupAppEventListeners();
                     appState.listenersAttached = true;
@@ -543,36 +615,38 @@
 
                 if (username.toLowerCase() === 'admin' && password.toLowerCase() === 'admin') { 
                     appState.currentUser = { Usuario: 'Admin', Rol: 'Admin' };
-                    
-                    initializeApp(true); 
-
                     const online = await fetchData();
                     if (online) {
-                        roleDisplay.textContent = `Rol: ${appState.currentUser.Rol}`;
-                        populateFormDropdowns();
-                        renderCitasTable(appState.data.citas);
+                        appState.isOffline = false;
+                        initializeApp();
                     } else {
-                        alert('No se pudo conectar al servidor. La aplicación permanecerá en modo offline.');
+                        appState.isOffline = true;
+                        appState.data = getOfflineMockData();
+                        showNotification('Conexión fallida. Iniciando en Modo Demo.', true);
+                        initializeApp();
                     }
-
                 } else {
                     if (await fetchData()) {
                         const foundUser = appState.data.usuarios.find(u => u.Usuario === username && u.Contraseña === password);
                         if (foundUser) {
                             appState.currentUser = foundUser;
-                            initializeApp(false);
+                            appState.isOffline = false;
+                            initializeApp();
                         } else {
                             loginError.textContent = 'Usuario o contraseña incorrectos.';
                             loginError.classList.remove('hidden');
                         }
+                    } else {
+                         loginError.textContent = 'Fallo de conexión. Intente más tarde.';
+                         loginError.classList.remove('hidden');
                     }
                 }
                 submitButton.disabled = false;
                 submitButton.textContent = 'Ingresar';
             };
-
+            
             const handleLogout = () => {
-                Object.assign(appState, { currentUser: null, data: {}, isEditing: false, isViewing: false });
+                Object.assign(appState, { currentUser: null, data: {}, isEditing: false, isViewing: false, isOffline: false });
                 appScreen.style.display = 'none';
                 loginScreen.style.display = 'flex';
                 loginForm.reset();
@@ -640,18 +714,12 @@
                     const viewBtn = `<button data-action="view" class="view-btn text-green-600 hover:text-green-800" title="Ver"><span class="material-symbols-outlined">visibility</span></button>`;
                     const editBtn = `<button data-action="edit" class="edit-btn text-blue-600 hover:text-blue-800" title="Editar"><span class="material-symbols-outlined">edit</span></button>`;
                     const deleteBtn = `<button data-action="delete" class="delete-btn text-red-600 hover:text-red-800" title="Eliminar"><span class="material-symbols-outlined">delete</span></button>`;
-
                     if (role === 'Examenes') buttons = viewBtn;
                     if (role === 'Imagenes') buttons = viewBtn + editBtn;
                     if (role === 'Admin') buttons = viewBtn + editBtn + deleteBtn;
-                    
                     cell.innerHTML = buttons;
                 });
             }
-            
-            // =================================================================================
-            // FORM LOGIC & CALCULATIONS
-            // =================================================================================
 
             function calculateAll() {
                 const { montoTotal$, cobrar$, cobrarCRC } = getCalculatedData();
@@ -666,9 +734,7 @@
                 const selectedMedicoReporta = appState.data.medicos.find(m => m.Medico === formFields.medicoReporta.value);
                 
                 const montoTotal$ = selectedService ? parseNumber(selectedService.Precio) : 0;
-                
                 const descuento = parseNumber(formFields.descuento.value);
-
                 const tipoCambio = parseNumber(formFields.tipoCambio.value);
                 const ivaPercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.IVA) : 0;
                 const feePercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.Fees) : 0;
@@ -714,7 +780,7 @@
             // =================================================================================
             // EVENT HANDLERS
             // =================================================================================
-
+            
             function setupAppEventListeners() {
                 logoutButton.addEventListener('click', handleLogout);
                 citaForm.addEventListener('submit', handleFormSubmit);
@@ -764,7 +830,7 @@
                     renderCitasTable(filteredCitas);
                 });
             }
-            
+
             async function handleFormSubmit(event) {
                 event.preventDefault();
                 if (appState.isViewing) return;
@@ -775,16 +841,14 @@
 
                 try {
                     const activeEspecialidadBtn = formFields.especialidadContainer.querySelector('.active');
-                    if (!activeEspecialidadBtn) {
-                        throw new Error('Por favor, seleccione un tipo de estudio.');
-                    }
-
+                    if (!activeEspecialidadBtn) throw new Error('Por favor, seleccione un tipo de estudio.');
+                    
                     const calculatedData = getCalculatedData();
-                    const maxId = appState.data.citas.reduce((max, c) => Math.max(max, parseNumber(c.ID)), 0);
+                    const isEditing = appState.isEditing;
                     
                     const citaData = {
                         ...calculatedData,
-                        ID: appState.isEditing ? parseNumber(formFields.id.value) : maxId + 1,
+                        ID: isEditing ? parseNumber(formFields.id.value) : generateUniqueNumericId(),
                         Enviado: formFields.enviado.checked ? 'Si' : 'No',
                         'Fecha de Estudio': formFields.fechaEstudio.value,
                         Nombre: formFields.nombre.value,
@@ -796,24 +860,60 @@
                         'Método pago': formFields.metodoPago.value,
                         'Descuento aplicado por': (calculatedData.Descuento > 0) ? appState.currentUser.Usuario : '',
                     };
-                    
-                    const payload = { ...citaData, tipoEstudio: citaData.Especialidad };
-                    const endpoint = appState.isEditing ? '/.netlify/functions/update-cita' : '/.netlify/functions/add-cita';
-                    const method = appState.isEditing ? 'PUT' : 'POST';
 
-                    await apiCall(endpoint, { method, body: JSON.stringify(payload) });
+                    if (appState.isOffline) {
+                        if (isEditing) {
+                            const index = appState.data.citas.findIndex(c => String(c.ID) === String(citaData.ID));
+                            if (index > -1) appState.data.citas[index] = citaData;
+                        } else {
+                            appState.data.citas.push(citaData);
+                        }
+                    } else {
+                        const payload = { ...citaData, tipoEstudio: citaData.Especialidad };
+                        const endpoint = isEditing ? '/.netlify/functions/update-cita' : '/.netlify/functions/add-cita';
+                        const method = isEditing ? 'PUT' : 'POST';
+                        await apiCall(endpoint, { method, body: JSON.stringify(payload) });
+                        await fetchData();
+                    }
 
-                    await fetchData();
                     renderCitasTable(appState.data.citas);
                     resetForm();
                     showView('consultar');
-                    alert(`Registro ${appState.isEditing ? 'actualizado' : 'guardado'} con éxito.`);
+                    showNotification(`Registro ${isEditing ? 'actualizado' : 'guardado'} con éxito.`);
 
                 } catch (error) {
                     console.error("Error al guardar:", error);
-                    alert(`No se pudo guardar el registro: ${error.message}`);
+                    showNotification(`No se pudo guardar el registro: ${error.message}`, true);
                 } finally {
                     submitButton.disabled = false;
+                    showLoader(false);
+                }
+            }
+            
+            async function handleDeleteClick(citaId) {
+                if (!confirm(`¿Está seguro de que desea eliminar el registro ID: ${citaId}?`)) return;
+                
+                const citaIndex = appState.data.citas.findIndex(c => String(c.ID) === String(citaId));
+                if (citaIndex === -1) return;
+                
+                const cita = appState.data.citas[citaIndex];
+
+                showLoader(true);
+                try {
+                    if (appState.isOffline) {
+                        appState.data.citas.splice(citaIndex, 1);
+                    } else {
+                        const payload = { ID: cita.ID, tipoEstudio: cita.Especialidad };
+                        await apiCall('/.netlify/functions/delete-cita', { method: 'DELETE', body: JSON.stringify(payload) });
+                        await fetchData();
+                    }
+                    
+                    renderCitasTable(appState.data.citas);
+                    showNotification('Registro eliminado con éxito.');
+                } catch (error) {
+                    console.error('Delete Error:', error);
+                    showNotification(`No se pudo eliminar el registro: ${error.message}`, true);
+                } finally {
                     showLoader(false);
                 }
             }
@@ -883,7 +983,7 @@
                     formFields.tipoEstudio.value = cita['Tipo de Estudio'];
                     formFields.medicoRefiere.value = cita['Medico que Refiere'];
                     formFields.medicoReporta.value = cita['Medico que Reporta'];
-                    formFields.descuento.value = parsePercent(cita.Descuento);
+                    formFields.descuento.value = parseNumber(cita.Descuento); // FIX: Changed from parsePercent to parseNumber
                     formFields.metodoPago.value = cita['Método pago'];
                     formFields.tipoCambio.value = parseNumber(cita['Tipo de cambio']);
                     formFields.enviado.checked = cita.Enviado && cita.Enviado.toLowerCase() === 'si';
@@ -904,48 +1004,11 @@
                 citaForm.querySelector('button[type="submit"] span:last-child').textContent = 'Actualizar';
                 showView('registrar');
             }
-            
-            async function handleDeleteClick(citaId) {
-                if (!confirm(`¿Está seguro de que desea eliminar el registro ID: ${citaId}?`)) return;
-                const cita = appState.data.citas.find(c => String(c.ID) === String(citaId));
-                if (!cita) return;
 
-                showLoader(true);
-                try {
-                    const payload = { ID: cita.ID, tipoEstudio: cita.Especialidad };
-                    await apiCall('/.netlify/functions/delete-cita', { method: 'DELETE', body: JSON.stringify(payload) });
-                    
-                    await fetchData();
-                    renderCitasTable(appState.data.citas);
-                    alert('Registro eliminado con éxito.');
-                } catch (error) {
-                    console.error('Delete Error:', error);
-                    alert(`No se pudo eliminar el registro: ${error.message}`);
-                } finally {
-                    showLoader(false);
-                }
-            }
-
-            // =================================================================================
             // APP INITIALIZATION
-            // =================================================================================
             loginForm.addEventListener('submit', handleLogin);
         });
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
