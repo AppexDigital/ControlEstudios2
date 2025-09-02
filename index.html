@@ -769,7 +769,10 @@
                 const selectedMetodoPago = appState.data.metodosDePago.find(mp => mp.Tipo === formFields.metodoPago.value);
                 const selectedMedicoReporta = appState.data.medicos.find(m => m.Medico === formFields.medicoReporta.value);
                 
-                const montoTotal$ = selectedService ? parseNumber(selectedService.Precio) : 0;
+                // ARCHITECTURAL FIX (v12.11): Clearly separate customer price base from commission bases.
+                // The customer's price ALWAYS uses the main "Precio" field.
+                const precioBaseCliente$ = selectedService ? parseNumber(selectedService.Precio) : 0;
+                
                 const descuento = parseNumber(formFields.descuento.value);
                 const tipoCambio = parseNumber(formFields.tipoCambio.value);
                 const ivaPercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.IVA) : 0;
@@ -777,24 +780,26 @@
                 const porcentajeComision = selectedMedicoReporta ? parsePercent(selectedMedicoReporta.Comisión) : 0;
                 const tasaIVAMedico = 0.04;
 
-                const montoTotalDescontado$ = montoTotal$ * (1 - descuento);
+                const montoTotalDescontado$ = precioBaseCliente$ * (1 - descuento);
                 const iva$ = montoTotalDescontado$ * ivaPercent;
                 const montoTotalDescontadoIVA$ = montoTotalDescontado$ + iva$;
-                const fee$ = montoTotalDescontadoIVA$ * feePercent;
-                const cobrar$ = montoTotalDescontadoIVA$; // ARCHITECTURAL FIX (v12.10)
+                const fee$ = montoTotalDescontadoIVA$ * feePercent; // Fee is calculated, but not added to the customer's total.
+                const cobrar$ = montoTotalDescontadoIVA$; // This is the final customer total.
                 const cobrarCRC = cobrar$ * tipoCambio;
 
                 let comision$ = 0;
                 if (selectedService && porcentajeComision > 0) {
                     if (selectedService.Cobro === 'Especial') {
-                        const baseComision = parseNumber(selectedService['Base para comisión']);
-                        const montoPagar = parseNumber(selectedService['Moto a pagar']);
-                        if (montoTotal$ > 0) {
-                            const parte1 = ((baseComision * (1 - descuento)) * (1 + tasaIVAMedico)) - ((baseComision / montoTotal$) * fee$);
-                            const parte2 = ((montoPagar * (1 - descuento)) * (1 + tasaIVAMedico)) - ((montoPagar / montoTotal$) * fee$);
+                        // For "Especial" commissions, use the specific fields from the sheet.
+                        const baseComisionEspecial$ = parseNumber(selectedService['Base para comisión']);
+                        const montoPagarEspecial$ = parseNumber(selectedService['Moto a pagar']);
+                        
+                        if (precioBaseCliente$ > 0) {
+                            const parte1 = ((baseComisionEspecial$ * (1 - descuento)) * (1 + tasaIVAMedico)) - ((baseComisionEspecial$ / precioBaseCliente$) * fee$);
+                            const parte2 = ((montoPagarEspecial$ * (1 - descuento)) * (1 + tasaIVAMedico)) - ((montoPagarEspecial$ / precioBaseCliente$) * fee$);
                             comision$ = (parte1 * porcentajeComision) + parte2;
                         }
-                    } else {
+                    } else { // "Normal" commission calculation
                         comision$ = (cobrar$ - fee$) * porcentajeComision;
                     }
                 }
@@ -804,12 +809,13 @@
                 const ivaPagadoHacienda = debitoFiscal - creditoFiscal;
                 
                 return {
-                    'Monto Total': montoTotal$, Descuento: descuento, 'Monto Total Descontado': montoTotalDescontado$,
+                    'Monto Total': precioBaseCliente$, Descuento: descuento, 'Monto Total Descontado': montoTotalDescontado$,
                     IVA: iva$, Fee: fee$, 'Monto total Descontado con IVA': cobrar$, 'Tipo de cambio': tipoCambio,
                     'Cobrar ₡': cobrarCRC, 'Cobrar $': cobrar$, 'Porcentaje de comisión': porcentajeComision,
                     'Comisión en Colones': comisionCRC, 'Comisión en Dólares': comision$, 'Debito Fiscal': debitoFiscal,
                     'Crédito Fiscal': creditoFiscal, 'IVA Pagado a Hacienda': ivaPagadoHacienda,
-                    montoTotal$, cobrar$, cobrarCRC
+                    montoTotal$: precioBaseCliente$, // Return main price for display
+                    cobrar$, cobrarCRC
                 };
             }
             
