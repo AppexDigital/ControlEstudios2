@@ -742,7 +742,9 @@
                 const selectedMetodoPago = appState.data.metodosDePago.find(mp => mp.Tipo === formFields.metodoPago.value);
                 const selectedMedicoReporta = appState.data.medicos.find(m => m.Medico === formFields.medicoReporta.value);
                 
+                // AJUSTE QUIRÚRGICO: Se asegura de usar siempre la columna 'Precio' para el cliente.
                 const precioBaseCliente$ = selectedService ? parseNumber(selectedService.Precio) : 0;
+                
                 const descuento = parseNumber(formFields.descuento.value);
                 const tipoCambio = parseNumber(formFields.tipoCambio.value);
                 const ivaPercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.IVA) : 0;
@@ -755,10 +757,10 @@
                 const cobrar$ = montoTotalDescontado$ + iva$;
                 const cobrarCRC = cobrar$ * tipoCambio;
                 
-                // --- Lógica de comisiones aislada ---
+                // --- Lógica de comisiones aislada (sin cambios, ya era correcta) ---
                 let comision$ = 0;
                 if (selectedService && porcentajeComision > 0) {
-                    const feeCalculado$ = cobrar$ * feePercent; // Fee se calcula sobre el total final
+                    const feeCalculado$ = cobrar$ * feePercent; 
                     if (selectedService.Cobro === 'Especial') {
                         const baseComisionEspecial$ = parseNumber(selectedService['Base para comisión']);
                         const montoPagarEspecial$ = parseNumber(selectedService['Moto a pagar']);
@@ -1029,3 +1031,4 @@
     </script>
 </body>
 </html>
+
