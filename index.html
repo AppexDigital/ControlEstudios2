@@ -742,8 +742,8 @@
                 const selectedMetodoPago = appState.data.metodosDePago.find(mp => mp.Tipo === formFields.metodoPago.value);
                 const selectedMedicoReporta = appState.data.medicos.find(m => m.Medico === formFields.medicoReporta.value);
                 
-                // AJUSTE QUIRÚRGICO: Se asegura de usar siempre la columna 'Precio' para el cliente.
-                const precioBaseCliente$ = selectedService ? parseNumber(selectedService.Precio) : 0;
+                // AJUSTE QUIRÚRGICO v12.14: Se asegura de usar siempre la columna 'Precio' para el cliente.
+                const precioBaseCliente$ = selectedService ? parseNumber(selectedService['Precio']) : 0;
                 
                 const descuento = parseNumber(formFields.descuento.value);
                 const tipoCambio = parseNumber(formFields.tipoCambio.value);
@@ -1031,4 +1031,6 @@
     </script>
 </body>
 </html>
+
+
 
