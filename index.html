@@ -28,8 +28,6 @@
             --color-text-primary: #1e293b; /* Texto principal (Slate-800) */
             --color-text-secondary: #64748b;/* Texto secundario (Slate-500) */
             --color-border: #e2e8f0;      /* Bordes sutiles (Slate-200) */
-            --color-success: #10b981;     /* Verde (Emerald-500) */
-            --color-error: #ef4444;       /* Rojo (Red-500) */
         }
         html, body {
             height: 100%;
@@ -154,63 +152,17 @@
             font-size: clamp(1.1rem, 4vw, 2rem);
             white-space: nowrap;
         }
-        
-        #notification-container {
-            position: fixed;
-            bottom: 1.25rem;
-            right: 1.25rem;
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-            align-items: flex-end;
+        .toast-notification {
+            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            transform: translateX(120%);
         }
-        .toast {
-            display: flex;
-            align-items: center;
-            padding: 1rem 1.5rem;
-            border-radius: 0.75rem;
-            color: white;
-            font-weight: 600;
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
-            opacity: 0;
-            transform: translateX(100%);
-            transition: all 0.4s cubic-bezier(0.21, 1.02, 0.73, 1);
-        }
-        .toast.show {
-            opacity: 1;
+        .toast-notification.show {
             transform: translateX(0);
-        }
-        .toast.hide {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        .toast-success { background-color: var(--color-success); }
-        .toast-error { background-color: var(--color-error); }
-        .toast .material-symbols-outlined {
-            margin-right: 0.75rem;
-            font-size: 1.5rem;
-        }
-        
-        #confirmation-modal-overlay {
-            transition: opacity 0.3s ease;
-        }
-        #confirmation-modal {
-            transition: all 0.3s ease;
-        }
-        #confirmation-modal-overlay.show {
-            opacity: 1;
-            pointer-events: auto;
-        }
-        #confirmation-modal-overlay.show #confirmation-modal {
-            opacity: 1;
-            transform: translateY(0);
         }
     </style>
 </head>
 <body>
-    <div id="notification-container"></div>
-
+    <!-- 1. Pantalla de Login -->
     <div id="login-screen" class="flex items-center justify-center h-full login-background p-4">
         <div class="w-full max-w-md p-10 space-y-8 bg-white rounded-2xl login-card">
             <div class="text-center">
@@ -234,7 +186,9 @@
         </div>
     </div>
 
+    <!-- 2. Aplicación Principal -->
     <div id="app-screen" class="hidden h-full flex flex-col">
+        <!-- Barra de Navegación -->
         <nav class="w-full flex-shrink-0 z-10 shadow-lg" style="background-color: var(--color-primary);">
             <div class="mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-20">
@@ -264,12 +218,15 @@
             </div>
         </nav>
 
+        <!-- Contenido Principal -->
         <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+            <!-- Vista de Registro de Exámen -->
             <div id="registrar-view" class="min-h-full">
                 <form id="cita-form" class="bg-color-card p-6 sm:p-8 rounded-2xl shadow-xl border border-color-border w-full max-w-full pb-24 md:pb-8">
                     <input type="hidden" id="cita-id">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-x-8 gap-y-6">
                         
+                        <!-- Columna 1 -->
                         <div class="space-y-6 flex flex-col">
                             <h3 class="form-section-title"><span class="material-symbols-outlined">person</span>Información del Paciente</h3>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -296,6 +253,7 @@
                             </div>
                         </div>
                         
+                        <!-- Columna 2 -->
                         <div class="space-y-6 flex flex-col">
                              <h3 class="form-section-title"><span class="material-symbols-outlined">medical_information</span>Detalles del Exámen</h3>
                              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -328,6 +286,7 @@
                             </div>
                         </div>
 
+                        <!-- Columna 3 -->
                         <div class="space-y-6 flex flex-col">
                             <h3 class="form-section-title"><span class="material-symbols-outlined">receipt_long</span>Resumen de Pago</h3>
                             <div class="bg-slate-100 p-4 rounded-xl border-2 border-slate-200 space-y-4 flex flex-col flex-grow justify-center">
@@ -355,6 +314,7 @@
                         </div>
                     </div>
                     
+                    <!-- Acciones del Formulario -->
                     <div class="flex flex-col sm:flex-row justify-between items-center pt-6 mt-6 border-t-2 border-color-border gap-4">
                          <div class="flex items-center self-start sm:self-center">
                             <input id="enviado" type="checkbox" class="h-5 w-5 rounded border-gray-300 text-color-secondary focus:ring-color-secondary focus:ring-2">
@@ -376,6 +336,7 @@
                 </form>
             </div>
 
+            <!-- Vista de Consulta de Exámenes -->
             <div id="consultar-view" class="hidden">
                  <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-lg border border-color-border">
                     <div class="mb-6">
@@ -405,6 +366,7 @@
             </div>
         </main>
         
+        <!-- Barra de navegación inferior para móviles -->
         <div class="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around shadow-top z-20">
              <button id="nav-registrar-mobile" class="flex-1 py-3 flex flex-col items-center justify-center text-sm font-medium text-gray-500">
                  <span class="material-symbols-outlined">edit_document</span>
@@ -416,29 +378,27 @@
              </button>
         </div>
     </div>
+    
+    <!-- Componentes de UI Adicionales -->
+    <div id="notification-container" class="fixed bottom-5 right-5 z-[100] w-full max-w-sm space-y-3"></div>
 
-    <div id="confirmation-modal-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 opacity-0 pointer-events-none">
-        <div id="confirmation-modal" class="bg-white rounded-2xl shadow-2xl w-full max-w-md m-4 transform transition-all opacity-0 -translate-y-10">
-            <div class="p-8 text-center">
-                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full" style="background-color: #fee2e2;">
-                    <span class="material-symbols-outlined text-4xl" style="color: var(--color-error);">warning</span>
-                </div>
-                <h3 class="mt-5 text-2xl font-bold text-color-text-primary">¿Confirmar Eliminación?</h3>
-                <p id="modal-message" class="mt-3 text-base text-color-text-secondary">¿Realmente desea eliminar este registro? Esta acción no se puede deshacer.</p>
-            </div>
-            <div class="bg-gray-50 px-6 py-4 flex flex-col-reverse sm:flex-row sm:justify-center gap-3 rounded-b-2xl">
-                <button type="button" id="modal-cancel-btn" class="btn-secondary w-full sm:w-auto py-2 px-6 rounded-lg text-base">
-                    Cancelar
-                </button>
-                <button type="button" id="modal-confirm-btn" class="w-full sm:w-auto py-2 px-6 rounded-lg text-base text-white" style="background-color: var(--color-error);">
-                    Sí, Eliminar
-                </button>
+    <div id="confirmation-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 flex items-center justify-center z-[100] hidden p-4">
+        <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full transform transition-all scale-95 opacity-0" id="confirmation-modal-content">
+            <h3 class="text-xl font-bold text-slate-800" id="modal-title">Confirmar Acción</h3>
+            <p class="text-slate-600 mt-4" id="modal-message">¿Está seguro?</p>
+            <div class="flex justify-end gap-4 mt-8">
+                <button id="modal-cancel-btn" class="btn-secondary py-2 px-6 rounded-lg">Cancelar</button>
+                <button id="modal-confirm-btn" class="bg-red-600 text-white font-semibold py-2 px-6 rounded-lg hover:bg-red-700 transition-colors">Confirmar</button>
             </div>
         </div>
     </div>
 
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // =================================================================================
+            // STATE & CONFIG
+            // =================================================================================
             const appState = {
                 currentUser: null,
                 data: { usuarios: [], servicios: [], medicos: [], metodosDePago: [], descuentos: [], citas: [] },
@@ -448,6 +408,9 @@
                 listenersAttached: false
             };
 
+            // =================================================================================
+            // DOM REFERENCES
+            // =================================================================================
             const loginScreen = document.getElementById('login-screen');
             const appScreen = document.getElementById('app-screen');
             const loginForm = document.getElementById('login-form');
@@ -460,11 +423,7 @@
             const searchInput = document.getElementById('search-input');
             const clearFormBtn = document.getElementById('clear-form-btn');
             const notificationContainer = document.getElementById('notification-container');
-            const confirmationModalOverlay = document.getElementById('confirmation-modal-overlay');
             const confirmationModal = document.getElementById('confirmation-modal');
-            const modalMessage = document.getElementById('modal-message');
-            const modalConfirmBtn = document.getElementById('modal-confirm-btn');
-            const modalCancelBtn = document.getElementById('modal-cancel-btn');
             
             const nav = {
                 registrar: document.getElementById('nav-registrar'),
@@ -505,90 +464,72 @@
             loader.innerHTML = `<div class="w-16 h-16 border-4 border-t-blue-600 border-gray-200 rounded-full animate-spin"></div>`;
             document.body.appendChild(loader);
 
+            // =================================================================================
+            // UTILITY & UI FUNCTIONS
+            // =================================================================================
             const parsePercent = (val) => parseFloat(String(val).replace('%', '')) / 100 || 0;
             const parseNumber = (val) => {
                 if (typeof val === 'number') return val;
                 if (typeof val !== 'string' || !val) return 0;
-                const cleanStr = val.trim().replace(/[$,₡\s]/g, '').replace(',', '.');
+                const cleanStr = val.trim().replace(/[$,₡\s]/g, '').replace(/\.(?=.*\.)/g, '').replace(',', '.');
                 const num = parseFloat(cleanStr);
                 return isNaN(num) ? 0 : num;
             };
+
             const formatUSD = (num) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
             const formatCRC = (num) => new Intl.NumberFormat('es-CR', { style: 'currency', currency: 'CRC' }).format(num);
             const showLoader = (show) => loader.classList.toggle('hidden', !show);
 
             function showNotification(message, isError = false) {
+                const id = `toast-${Date.now()}`;
                 const toast = document.createElement('div');
-                toast.className = `toast ${isError ? 'toast-error' : 'toast-success'}`;
-                const icon = isError ? 'error' : 'check_circle';
-                toast.innerHTML = `<span class="material-symbols-outlined">${icon}</span> ${message}`;
+                toast.id = id;
+                toast.className = `toast-notification flex items-start gap-4 p-4 rounded-lg shadow-lg text-white ${isError ? 'bg-red-500' : 'bg-green-500'}`;
+                toast.innerHTML = `
+                    <span class="material-symbols-outlined text-2xl">${isError ? 'error' : 'check_circle'}</span>
+                    <div class="flex-1">
+                        <p class="font-bold">${isError ? 'Error' : 'Éxito'}</p>
+                        <p class="text-sm">${message}</p>
+                    </div>
+                `;
                 notificationContainer.appendChild(toast);
-                setTimeout(() => toast.classList.add('show'), 10);
+                
+                setTimeout(() => toast.classList.add('show'), 100);
                 setTimeout(() => {
                     toast.classList.remove('show');
-                    toast.classList.add('hide');
                     toast.addEventListener('transitionend', () => toast.remove());
-                }, 4000);
-            }
-            
-            function showConfirmationModal(message, onConfirmCallback) {
-                modalMessage.innerHTML = message;
-                confirmationModalOverlay.classList.remove('hidden');
-                setTimeout(() => {
-                    confirmationModalOverlay.classList.add('show');
-                }, 10);
-
-                let confirmHandler, cancelHandler;
-                
-                const hideConfirmationModal = () => {
-                    confirmationModalOverlay.classList.remove('show');
-                    setTimeout(() => {
-                        confirmationModalOverlay.classList.add('hidden');
-                        modalConfirmBtn.removeEventListener('click', confirmHandler);
-                        modalCancelBtn.removeEventListener('click', cancelHandler);
-                        confirmationModalOverlay.removeEventListener('click', cancelHandler);
-                    }, 300);
-                };
-                
-                confirmHandler = () => {
-                    onConfirmCallback();
-                    hideConfirmationModal();
-                };
-                
-                cancelHandler = (e) => {
-                    if (e.target === confirmationModalOverlay || e.target === modalCancelBtn) {
-                        hideConfirmationModal();
-                    }
-                };
-
-                modalConfirmBtn.addEventListener('click', confirmHandler);
-                modalCancelBtn.addEventListener('click', cancelHandler);
-                confirmationModalOverlay.addEventListener('click', cancelHandler);
+                }, 5000);
             }
 
-            const generateUniqueNumericId = () => {
-                const existingIds = new Set(appState.data.citas.map(c => parseNumber(c.ID)));
-                let newId;
-                do {
-                    newId = Math.floor(10000000 + Math.random() * 90000000);
-                } while (existingIds.has(newId));
-                return newId;
-            };
-            
-            const getOfflineMockData = () => ({
-                usuarios: [],
-                servicios: [
-                    { Código: 'RX', 'Producto o Servicio': 'Radiografía de Torax (Demo)', Precio: '50', Cobro: 'Normal' },
-                    { Código: 'DMO', 'Producto o Servicio': 'Densitometría Ósea (Demo)', Precio: '75', Cobro: 'Normal' },
-                    { Código: 'MMG', 'Producto o Servicio': 'Mamografía (Demo)', Precio: '100', Cobro: 'Especial', 'Base para comisión': '80', 'Moto a pagar': '10' }
-                ],
-                medicos: [ { Medico: 'Dr. House (Demo)', Comisión: '10%' }, { Medico: 'Dra. Grey (Demo)', Comisión: '15%' } ],
-                metodosDePago: [ { Tipo: 'Tarjeta (Demo)', IVA: '4%', Fees: '3%' }, { Tipo: 'Efectivo (Demo)', IVA: '0%', Fees: '0%' } ],
-                descuentos: [{ Descuentos: '10%' }, { Descuentos: '20%' }],
-                citas: [{ ID: 10101010, Nombre: 'Paciente de Prueba (Demo)', 'Fecha de Estudio': new Date().toISOString().split('T')[0], 'Tipo de Estudio': 'Radiografía de Torax (Demo)', 'Medico que Reporta': 'Dr. House (Demo)', 'Monto total Descontado con IVA': '51.5', Enviado: 'No', Especialidad: 'RX', 'Método pago': 'Efectivo (Demo)', 'Descuento': '0.0' }]
-            });
+            function showConfirmationModal(title, message, onConfirm) {
+                const modalContent = document.getElementById('confirmation-modal-content');
+                document.getElementById('modal-title').textContent = title;
+                document.getElementById('modal-message').innerHTML = message;
+                confirmationModal.classList.remove('hidden');
+                
+                setTimeout(() => modalContent.classList.add('scale-100', 'opacity-100'), 10);
+                
+                const cancelBtn = document.getElementById('modal-cancel-btn');
+                const confirmBtn = document.getElementById('modal-confirm-btn');
 
+                const cleanup = () => {
+                    modalContent.classList.remove('scale-100', 'opacity-100');
+                    setTimeout(() => confirmationModal.classList.add('hidden'), 200);
+                    confirmBtn.replaceWith(confirmBtn.cloneNode(true)); // Remove listeners
+                    cancelBtn.replaceWith(cancelBtn.cloneNode(true));
+                };
+
+                confirmBtn.onclick = () => {
+                    onConfirm();
+                    cleanup();
+                };
+                cancelBtn.onclick = cleanup;
+            }
+            
             async function apiCall(endpoint, options = {}, timeout = 15000) {
+                if (appState.isOffline) {
+                    throw new Error("La aplicación está en modo offline. Las llamadas al servidor están deshabilitadas.");
+                }
                 const controller = new AbortController();
                 const id = setTimeout(() => controller.abort(), timeout);
                 const newOptions = { ...options, headers: { 'Content-Type': 'application/json', ...options.headers }, signal: controller.signal };
@@ -612,25 +553,53 @@
                 showLoader(true);
                 try {
                     appState.data = await apiCall('/.netlify/functions/get-data', { method: 'GET' });
+                    appState.isOffline = false;
                     return true;
                 } catch (error) {
-                    console.error("Error fetching data:", error.message);
+                    console.error("Error al obtener datos:", error.message);
+                    loginError.textContent = 'Fallo de conexión. Verifique su red.';
+                    loginError.classList.remove('hidden');
+                    appState.isOffline = true;
                     return false;
                 } finally {
                     showLoader(false);
                 }
             }
+            
+            function getOfflineMockData() {
+                 return {
+                    usuarios: [{ Usuario: "Admin", Contraseña: "Admin", Rol: "Admin" }],
+                    servicios: [ { 'Producto o Servicio': 'RX Cráneo', Código: 'RX', Precio: '50', Cobro: 'Normal' }, { 'Producto o Servicio': 'DMO Cadera', Código: 'DMO', Precio: '75', Cobro: 'Normal' }, { 'Producto o Servicio': 'MMG Unilateral', Código: 'MMG', Precio: '60', Cobro: 'Normal' } ],
+                    medicos: [ { Medico: 'Dr. House', Comisión: '10%' }, { Medico: 'Dra. Grey', Comisión: '12%' } ],
+                    metodosDePago: [ { Tipo: 'Efectivo', IVA: '0%', Fees: '0%' }, { Tipo: 'Tarjeta', IVA: '13%', Fees: '2.5%' } ],
+                    descuentos: [ { Descuentos: '5%' }, { Descuentos: '10%' } ],
+                    citas: [
+                        { ID: '101', Nombre: 'Paciente Demo 1', 'Fecha de Estudio': '2025-01-15', Especialidad: 'RX', 'Tipo de Estudio': 'RX Cráneo', 'Medico que Reporta': 'Dr. House', 'Monto total Descontado con IVA': '50', Enviado: 'No' },
+                        { ID: '102', Nombre: 'Paciente Demo 2', 'Fecha de Estudio': '2025-01-16', Especialidad: 'DMO', 'Tipo de Estudio': 'DMO Cadera', 'Medico que Reporta': 'Dra. Grey', 'Monto total Descontado con IVA': '84.75', Enviado: 'Si' }
+                    ]
+                };
+            }
 
+            // =================================================================================
+            // APPLICATION LOGIC (LOGIN, NAVIGATION, RENDERING)
+            // =================================================================================
+            
             function initializeApp() {
                 loginScreen.style.display = 'none';
                 appScreen.style.display = 'flex';
                 userDisplay.textContent = appState.currentUser.Usuario;
                 roleDisplay.textContent = `Rol: ${appState.currentUser.Rol}`;
-                if (appState.isOffline) {
+                
+                if (appState.isOffline){
                     roleDisplay.textContent += ' (Modo Demo)';
+                    showNotification('Conexión fallida. Iniciando en Modo Demo Offline.', true);
+                } else {
+                    showNotification('Conexión exitosa con la base de datos.');
                 }
+
                 populateFormDropdowns();
                 renderCitasTable(appState.data.citas);
+                
                 if (!appState.listenersAttached) {
                     setupAppEventListeners();
                     appState.listenersAttached = true;
@@ -645,44 +614,33 @@
                 const submitButton = loginForm.querySelector('button[type="submit"]');
                 submitButton.disabled = true;
                 submitButton.textContent = 'Verificando...';
+                
                 const username = loginForm.username.value;
                 const password = loginForm.password.value;
-                if (username.toLowerCase() === 'admin' && password.toLowerCase() === 'admin') { 
+                const isOnline = await fetchData();
+
+                if (isOnline) {
+                    const foundUser = appState.data.usuarios.find(u => u.Usuario === username && u.Contraseña === password);
+                    if (foundUser) {
+                        appState.currentUser = foundUser;
+                        initializeApp();
+                    } else {
+                        loginError.textContent = 'Usuario o contraseña incorrectos.';
+                        loginError.classList.remove('hidden');
+                    }
+                } else if (username.toLowerCase() === 'admin' && password.toLowerCase() === 'admin') {
                     appState.currentUser = { Usuario: 'Admin', Rol: 'Admin' };
-                    const online = await fetchData();
-                    if (online) {
-                        appState.isOffline = false;
-                        initializeApp();
-                        showNotification('Conexión exitosa a la base de datos.');
-                    } else {
-                        appState.isOffline = true;
-                        appState.data = getOfflineMockData();
-                        showNotification('Conexión fallida. Iniciando en Modo Demo.', true);
-                        initializeApp();
-                    }
-                } else {
-                    if (await fetchData()) {
-                        const foundUser = appState.data.usuarios.find(u => u.Usuario === username && u.Contraseña === password);
-                        if (foundUser) {
-                            appState.currentUser = foundUser;
-                            appState.isOffline = false;
-                            initializeApp();
-                            showNotification('Conexión exitosa a la base de datos.');
-                        } else {
-                            loginError.textContent = 'Usuario o contraseña incorrectos.';
-                            loginError.classList.remove('hidden');
-                        }
-                    } else {
-                         loginError.textContent = 'Fallo de conexión. Intente más tarde.';
-                         loginError.classList.remove('hidden');
-                    }
+                    appState.data = getOfflineMockData();
+                    initializeApp();
                 }
+                
                 submitButton.disabled = false;
                 submitButton.textContent = 'Ingresar';
             };
-            
+
             const handleLogout = () => {
-                Object.assign(appState, { currentUser: null, data: {}, isEditing: false, isViewing: false, isOffline: false });
+                Object.assign(appState, { currentUser: null, isEditing: false, isViewing: false, isOffline: false });
+                appState.data = { usuarios: [], servicios: [], medicos: [], metodosDePago: [], descuentos: [], citas: [] };
                 appScreen.style.display = 'none';
                 loginScreen.style.display = 'flex';
                 loginForm.reset();
@@ -750,11 +708,26 @@
                     const viewBtn = `<button data-action="view" class="view-btn text-green-600 hover:text-green-800" title="Ver"><span class="material-symbols-outlined">visibility</span></button>`;
                     const editBtn = `<button data-action="edit" class="edit-btn text-blue-600 hover:text-blue-800" title="Editar"><span class="material-symbols-outlined">edit</span></button>`;
                     const deleteBtn = `<button data-action="delete" class="delete-btn text-red-600 hover:text-red-800" title="Eliminar"><span class="material-symbols-outlined">delete</span></button>`;
+
                     if (role === 'Examenes') buttons = viewBtn;
                     if (role === 'Imagenes') buttons = viewBtn + editBtn;
                     if (role === 'Admin') buttons = viewBtn + editBtn + deleteBtn;
+                    
                     cell.innerHTML = buttons;
                 });
+            }
+            
+            // =================================================================================
+            // FORM LOGIC & CALCULATIONS
+            // =================================================================================
+            
+            function generateUniqueNumericId() {
+                const existingIds = new Set(appState.data.citas.map(c => c.ID));
+                let newId;
+                do {
+                    newId = Math.floor(10000000 + Math.random() * 90000000);
+                } while (existingIds.has(String(newId)));
+                return newId;
             }
 
             function calculateAll() {
@@ -770,7 +743,6 @@
                 const selectedMedicoReporta = appState.data.medicos.find(m => m.Medico === formFields.medicoReporta.value);
                 
                 const precioBaseCliente$ = selectedService ? parseNumber(selectedService.Precio) : 0;
-                
                 const descuento = parseNumber(formFields.descuento.value);
                 const tipoCambio = parseNumber(formFields.tipoCambio.value);
                 const ivaPercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.IVA) : 0;
@@ -780,24 +752,23 @@
 
                 const montoTotalDescontado$ = precioBaseCliente$ * (1 - descuento);
                 const iva$ = montoTotalDescontado$ * ivaPercent;
-                const montoTotalDescontadoIVA$ = montoTotalDescontado$ + iva$;
-                const fee$ = montoTotalDescontadoIVA$ * feePercent; 
-                const cobrar$ = montoTotalDescontadoIVA$;
+                const cobrar$ = montoTotalDescontado$ + iva$;
                 const cobrarCRC = cobrar$ * tipoCambio;
-
+                
+                // --- Lógica de comisiones aislada ---
                 let comision$ = 0;
                 if (selectedService && porcentajeComision > 0) {
+                    const feeCalculado$ = cobrar$ * feePercent; // Fee se calcula sobre el total final
                     if (selectedService.Cobro === 'Especial') {
                         const baseComisionEspecial$ = parseNumber(selectedService['Base para comisión']);
                         const montoPagarEspecial$ = parseNumber(selectedService['Moto a pagar']);
-                        
                         if (precioBaseCliente$ > 0) {
-                            const parte1 = ((baseComisionEspecial$ * (1 - descuento)) * (1 + tasaIVAMedico)) - ((baseComisionEspecial$ / precioBaseCliente$) * fee$);
-                            const parte2 = ((montoPagarEspecial$ * (1 - descuento)) * (1 + tasaIVAMedico)) - ((montoPagarEspecial$ / precioBaseCliente$) * fee$);
+                            const parte1 = ((baseComisionEspecial$ * (1 - descuento)) * (1 + tasaIVAMedico)) - ((baseComisionEspecial$ / precioBaseCliente$) * feeCalculado$);
+                            const parte2 = ((montoPagarEspecial$ * (1 - descuento)) * (1 + tasaIVAMedico)) - ((montoPagarEspecial$ / precioBaseCliente$) * feeCalculado$);
                             comision$ = (parte1 * porcentajeComision) + parte2;
                         }
-                    } else { 
-                        comision$ = (cobrar$ - fee$) * porcentajeComision;
+                    } else { // Cobro Normal
+                        comision$ = (cobrar$ - feeCalculado$) * porcentajeComision;
                     }
                 }
                 const comisionCRC = comision$ * tipoCambio;
@@ -807,15 +778,18 @@
                 
                 return {
                     'Monto Total': precioBaseCliente$, Descuento: descuento, 'Monto Total Descontado': montoTotalDescontado$,
-                    IVA: iva$, Fee: fee$, 'Monto total Descontado con IVA': cobrar$, 'Tipo de cambio': tipoCambio,
+                    IVA: iva$, Fee: 0, 'Monto total Descontado con IVA': cobrar$, 'Tipo de cambio': tipoCambio,
                     'Cobrar ₡': cobrarCRC, 'Cobrar $': cobrar$, 'Porcentaje de comisión': porcentajeComision,
                     'Comisión en Colones': comisionCRC, 'Comisión en Dólares': comision$, 'Debito Fiscal': debitoFiscal,
                     'Crédito Fiscal': creditoFiscal, 'IVA Pagado a Hacienda': ivaPagadoHacienda,
-                    montoTotal$: precioBaseCliente$,
-                    cobrar$, cobrarCRC
+                    montoTotal$: precioBaseCliente$, cobrar$, cobrarCRC
                 };
             }
             
+            // =================================================================================
+            // EVENT HANDLERS
+            // =================================================================================
+
             function setupAppEventListeners() {
                 logoutButton.addEventListener('click', handleLogout);
                 citaForm.addEventListener('submit', handleFormSubmit);
@@ -865,21 +839,23 @@
                     renderCitasTable(filteredCitas);
                 });
             }
-
+            
             async function handleFormSubmit(event) {
                 event.preventDefault();
                 if (appState.isViewing) return;
+
                 const submitButton = citaForm.querySelector('button[type="submit"]');
                 submitButton.disabled = true;
                 showLoader(true);
+
                 try {
                     const activeEspecialidadBtn = formFields.especialidadContainer.querySelector('.active');
                     if (!activeEspecialidadBtn) throw new Error('Por favor, seleccione un tipo de estudio.');
+                    
                     const calculatedData = getCalculatedData();
-                    const isEditing = appState.isEditing;
                     const citaData = {
                         ...calculatedData,
-                        ID: isEditing ? parseNumber(formFields.id.value) : generateUniqueNumericId(),
+                        ID: appState.isEditing ? parseNumber(formFields.id.value) : generateUniqueNumericId(),
                         Enviado: formFields.enviado.checked ? 'Si' : 'No',
                         'Fecha de Estudio': formFields.fechaEstudio.value,
                         Nombre: formFields.nombre.value,
@@ -891,24 +867,29 @@
                         'Método pago': formFields.metodoPago.value,
                         'Descuento aplicado por': (calculatedData.Descuento > 0) ? appState.currentUser.Usuario : '',
                     };
+                    
+                    const payload = { ...citaData, tipoEstudio: citaData.Especialidad };
+                    const endpoint = appState.isEditing ? '/.netlify/functions/update-cita' : '/.netlify/functions/add-cita';
+                    const method = appState.isEditing ? 'PUT' : 'POST';
+                    
                     if (appState.isOffline) {
-                        if (isEditing) {
-                            const index = appState.data.citas.findIndex(c => String(c.ID) === String(citaData.ID));
-                            if (index > -1) appState.data.citas[index] = citaData;
+                        // --- OFFLINE CRUD LOGIC ---
+                        if(appState.isEditing) {
+                            const index = appState.data.citas.findIndex(c => String(c.ID) === String(payload.ID));
+                            if (index > -1) appState.data.citas[index] = payload;
                         } else {
-                            appState.data.citas.push(citaData);
+                            appState.data.citas.push(payload);
                         }
                     } else {
-                        const payload = { ...citaData, tipoEstudio: citaData.Especialidad };
-                        const endpoint = isEditing ? '/.netlify/functions/update-cita' : '/.netlify/functions/add-cita';
-                        const method = isEditing ? 'PUT' : 'POST';
-                        await apiCall(endpoint, { method, body: JSON.stringify(payload) });
-                        await fetchData();
+                       await apiCall(endpoint, { method, body: JSON.stringify(payload) });
+                       await fetchData();
                     }
+
                     renderCitasTable(appState.data.citas);
                     resetForm();
                     showView('consultar');
-                    showNotification(`Registro ${isEditing ? 'actualizado' : 'guardado'} con éxito.`);
+                    showNotification(`Registro ${appState.isEditing ? 'actualizado' : 'guardado'} con éxito.`);
+
                 } catch (error) {
                     console.error("Error al guardar:", error);
                     showNotification(`No se pudo guardar el registro: ${error.message}`, true);
@@ -916,35 +897,6 @@
                     submitButton.disabled = false;
                     showLoader(false);
                 }
-            }
-            
-            async function handleDeleteClick(citaId) {
-                const cita = appState.data.citas.find(c => String(c.ID) === String(citaId));
-                if (!cita) return;
-
-                showConfirmationModal(
-                    `¿Realmente desea eliminar el registro de <strong>"${cita.Nombre}"</strong> (ID: ${citaId})? Esta acción es irreversible.`, 
-                    async () => {
-                        showLoader(true);
-                        try {
-                            if (appState.isOffline) {
-                                const citaIndex = appState.data.citas.findIndex(c => String(c.ID) === String(citaId));
-                                if (citaIndex > -1) appState.data.citas.splice(citaIndex, 1);
-                            } else {
-                                const payload = { ID: cita.ID, tipoEstudio: cita.Especialidad };
-                                await apiCall('/.netlify/functions/delete-cita', { method: 'DELETE', body: JSON.stringify(payload) });
-                                await fetchData();
-                            }
-                            renderCitasTable(appState.data.citas);
-                            showNotification('Registro eliminado con éxito.');
-                        } catch (error) {
-                            console.error('Delete Error:', error);
-                            showNotification(`No se pudo eliminar el registro: ${error.message}`, true);
-                        } finally {
-                            showLoader(false);
-                        }
-                    }
-                );
             }
 
             function handleEspecialidadChange() {
@@ -954,6 +906,7 @@
                 const options = services.map(s => `<option value="${s['Producto o Servicio']}">${s['Producto o Servicio']}</option>`).join('');
                 formFields.tipoEstudio.innerHTML = `<option value="">Seleccione...</option>${options}`;
                 calculateAll();
+                return services;
             }
 
             function setFormState(disabled) {
@@ -996,28 +949,30 @@
                 const cita = appState.data.citas.find(c => String(c.ID) === String(citaId));
                 if (!cita) return;
 
+                // Setear valores que no dependen de otros
                 formFields.id.value = cita.ID;
                 formFields.nombre.value = cita.Nombre;
                 formFields.identificacion.value = cita.Identificación;
                 formFields.fechaEstudio.value = cita['Fecha de Estudio'];
                 formFields.registra.textContent = cita['Descuento aplicado por'] || cita['Usuario que registra'] || 'N/A';
+                formFields.tipoCambio.value = parseNumber(cita['Tipo de cambio']);
+                formFields.enviado.checked = cita.Enviado && cita.Enviado.toLowerCase() === 'si';
+                formFields.descuento.value = cita.Descuento || "";
                 
+                // Cambiar la especialidad y poblar la lista de servicios
                 formFields.especialidadContainer.querySelectorAll('button').forEach(btn => {
                     btn.classList.toggle('active', btn.dataset.studyType === cita.Especialidad);
                 });
-                
                 handleEspecialidadChange();
                 
-                setTimeout(() => {
-                    formFields.tipoEstudio.value = cita['Tipo de Estudio'];
-                    formFields.medicoRefiere.value = cita['Medico que Refiere'];
-                    formFields.medicoReporta.value = cita['Medico que Reporta'];
-                    formFields.descuento.value = parseNumber(cita.Descuento);
-                    formFields.metodoPago.value = cita['Método pago'];
-                    formFields.tipoCambio.value = parseNumber(cita['Tipo de cambio']);
-                    formFields.enviado.checked = cita.Enviado && cita.Enviado.toLowerCase() === 'si';
-                    calculateAll();
-                }, 100);
+                // AHORA que el select está poblado, podemos setear el valor de forma segura y síncrona
+                formFields.tipoEstudio.value = cita['Tipo de Estudio'];
+                formFields.medicoRefiere.value = cita['Medico que Refiere'];
+                formFields.medicoReporta.value = cita['Medico que Reporta'];
+                formFields.metodoPago.value = cita['Método pago'];
+
+                // Finalmente, calcular todo con los datos correctos ya en el formulario
+                calculateAll();
             }
 
             function handleViewClick(citaId) {
@@ -1033,20 +988,44 @@
                 citaForm.querySelector('button[type="submit"] span:last-child').textContent = 'Actualizar';
                 showView('registrar');
             }
+            
+            async function handleDeleteClick(citaId) {
+                const cita = appState.data.citas.find(c => String(c.ID) === String(citaId));
+                if (!cita) return;
 
+                const onConfirm = async () => {
+                    showLoader(true);
+                    try {
+                        if (appState.isOffline) {
+                            // --- OFFLINE CRUD LOGIC ---
+                            appState.data.citas = appState.data.citas.filter(c => String(c.ID) !== String(citaId));
+                        } else {
+                            const payload = { ID: cita.ID, tipoEstudio: cita.Especialidad };
+                            await apiCall('/.netlify/functions/delete-cita', { method: 'DELETE', body: JSON.stringify(payload) });
+                            await fetchData();
+                        }
+                        renderCitasTable(appState.data.citas);
+                        showNotification('Registro eliminado con éxito.');
+                    } catch (error) {
+                        console.error('Delete Error:', error);
+                        showNotification(`No se pudo eliminar el registro: ${error.message}`, true);
+                    } finally {
+                        showLoader(false);
+                    }
+                };
+
+                showConfirmationModal(
+                    'Eliminar Registro',
+                    `¿Está seguro de que desea eliminar el estudio de <strong>${cita.Nombre}</strong> (ID: ${cita.ID})? <br/>Esta acción no se puede deshacer.`,
+                    onConfirm
+                );
+            }
+
+            // =================================================================================
+            // APP INITIALIZATION
+            // =================================================================================
             loginForm.addEventListener('submit', handleLogin);
         });
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
