@@ -909,10 +909,10 @@
 
                 const montoTotalDescontado$ = precioBaseCliente$ * (1 - descuento);
                 const iva$ = montoTotalDescontado$ * ivaPercent;
-                // AJUSTE v12.23: Se calcula el fee sobre el subtotal antes de sumarlo al total.
-                const montoSubtotal$ = montoTotalDescontado$ + iva$;
-                const feeCalculado$ = montoSubtotal$ * feePercent;
-                const cobrar$ = montoSubtotal$ + feeCalculado$; // El total a cobrar SÍ incluye el fee.
+                // AJUSTE v12.24: cobrar$ es el monto final para el cliente, NO incluye el Fee.
+                const cobrar$ = montoTotalDescontado$ + iva$;
+                // El Fee se calcula sobre el monto que paga el cliente.
+                const feeCalculado$ = cobrar$ * feePercent;
                 const cobrarCRC = cobrar$ * tipoCambio;
                 
                 let comision$ = 0;
@@ -1197,7 +1197,6 @@
     </script>
 </body>
 </html>
-
 
 
 
