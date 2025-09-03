@@ -766,7 +766,11 @@
                 }
 
                 // 2. Aplicar filtros de estado y envío
-                const todayStr = new Date().toISOString().split('T')[0];
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const day = String(today.getDate()).padStart(2, '0');
+                const todayStr = `${year}-${month}-${day}`;
 
                 if (appState.filters.status === 'activas') {
                     citasToDisplay = citasToDisplay.filter(c => c['Fecha de Estudio'] >= todayStr);
@@ -784,12 +788,11 @@
                 citasToDisplay.sort((a, b) => {
                     const dateA = new Date(a['Fecha de Estudio'] + 'T00:00:00');
                     const dateB = new Date(b['Fecha de Estudio'] + 'T00:00:00');
-                    const today = new Date();
-                    today.setHours(0,0,0,0);
+                    const todaySort = new Date(todayStr + 'T00:00:00');
 
                     const getCategory = (date) => {
-                        if (date.getTime() === today.getTime()) return 0; // Hoy
-                        if (date > today) return 1; // Futuro
+                        if (date.getTime() === todaySort.getTime()) return 0; // Hoy
+                        if (date > todaySort) return 1; // Futuro
                         return 2; // Pasado
                     };
 
@@ -814,12 +817,15 @@
                 }
                 
                 const today = new Date();
-                today.setHours(0, 0, 0, 0);
+                const year = today.getFullYear();
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const day = String(today.getDate()).padStart(2, '0');
+                const todayStr = `${year}-${month}-${day}`;
 
                 citas.forEach(cita => {
                     const row = document.createElement('tr');
-                    const citaDate = new Date(cita['Fecha de Estudio'] + 'T00:00:00');
-                    if (citaDate.getTime() === today.getTime()) {
+                    
+                    if (cita['Fecha de Estudio'] === todayStr) {
                         row.className = 'row-today';
                     } else {
                         row.className = 'hover:bg-slate-50';
@@ -917,8 +923,8 @@
                             const parte2 = ((montoPagarEspecial$ * (1 - descuento)) * (1 + tasaIVAMedico)) - ((montoPagarEspecial$ / precioBaseCliente$) * feeCalculado$);
                             comision$ = (parte1 * porcentajeComision) + parte2;
                         }
-                    } else { 
-                        comision$ = ((cobrar$ - feeCalculado$) * porcentajeComision) * (1 + tasaIVAMedico);
+                    } else { // Cobro Normal
+                        comision$ = ((montoTotalDescontado$ - feeCalculado$) * porcentajeComision) * (1 + tasaIVAMedico);
                     }
                 }
                 const comisionCRC = comision$ * tipoCambio;
@@ -1189,4 +1195,5 @@
     </script>
 </body>
 </html>
+
 
