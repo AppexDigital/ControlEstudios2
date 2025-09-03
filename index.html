@@ -159,6 +159,26 @@
         .toast-notification.show {
             transform: translateX(0);
         }
+        .filter-btn {
+            background-color: #f1f5f9;
+            color: #475569;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+        .filter-btn:hover {
+            background-color: #e2e8f0;
+        }
+        .filter-btn.active {
+            background-color: var(--color-primary);
+            color: white;
+            box-shadow: 0 2px 8px -2px rgba(30, 58, 138, 0.5);
+        }
+        .row-today {
+            background-color: #ecfdf5; /* green-50 */
+        }
     </style>
 </head>
 <body>
@@ -344,10 +364,13 @@
             <!-- Vista de Consulta de Exámenes -->
             <div id="consultar-view" class="hidden">
                  <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-lg border border-color-border">
-                    <div class="mb-6">
+                    <div class="flex flex-col md:flex-row gap-4 justify-between mb-6">
+                        <div id="filter-container" class="flex flex-col sm:flex-row gap-x-6 gap-y-4">
+                            <!-- Filtros se insertarán aquí -->
+                        </div>
                         <div class="relative">
                             <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">search</span>
-                            <input type="text" id="search-input" class="input-field w-full md:w-1/2 lg:w-1/3 pl-12" placeholder="Buscar por ID, paciente, doctores...">
+                            <input type="text" id="search-input" class="input-field w-full sm:w-64 pl-12" placeholder="Buscar...">
                         </div>
                     </div>
                     <div class="overflow-x-auto">
@@ -411,7 +434,11 @@
                 isEditing: false,
                 isViewing: false,
                 isOffline: false,
-                listenersAttached: false
+                listenersAttached: false,
+                filters: {
+                    status: 'activas', // 'todo', 'activas', 'inactivas'
+                    enviado: 'todo'    // 'todo', 'enviada', 'no_enviada'
+                }
             };
 
             // =================================================================================
@@ -431,6 +458,7 @@
             const notificationContainer = document.getElementById('notification-container');
             const confirmationModal = document.getElementById('confirmation-modal');
             const idDisplayText = document.getElementById('id-display-text');
+            const filterContainer = document.getElementById('filter-container');
             
             const nav = {
                 registrar: document.getElementById('nav-registrar'),
@@ -588,7 +616,7 @@
             }
 
             // =================================================================================
-            // APPLICATION LOGIC (LOGIN, NAVIGATION, RENDERING)
+            // APPLICATION LOGIC (INITIALIZATION, LOGIN, NAVIGATION)
             // =================================================================================
             
             function initializeApp() {
@@ -603,9 +631,10 @@
                 } else {
                     showNotification('Conexión exitosa con la base de datos.');
                 }
-
+                
                 populateFormDropdowns();
-                renderCitasTable(appState.data.citas);
+                buildFilterControls();
+                updateConsultationView();
                 
                 if (!appState.listenersAttached) {
                     setupAppEventListeners();
@@ -646,7 +675,7 @@
             };
 
             const handleLogout = () => {
-                Object.assign(appState, { currentUser: null, isEditing: false, isViewing: false, isOffline: false });
+                Object.assign(appState, { currentUser: null, isEditing: false, isViewing: false, isOffline: false, filters: { status: 'activas', enviado: 'todo' } });
                 appState.data = { usuarios: [], servicios: [], medicos: [], metodosDePago: [], descuentos: [], citas: [] };
                 appScreen.style.display = 'none';
                 loginScreen.style.display = 'flex';
@@ -679,17 +708,125 @@
                 populate(formFields.metodoPago, appState.data.metodosDePago, p => p.Tipo, p => p.Tipo);
             }
 
+            // =================================================================================
+            // CONSULTATION VIEW: FILTERING, SORTING, AND RENDERING
+            // =================================================================================
+
+            function buildFilterControls() {
+                const filterGroups = {
+                    status: {
+                        label: 'Estado:',
+                        options: { todo: 'Todo', activas: 'Activas', inactivas: 'Inactivas' }
+                    },
+                    enviado: {
+                        label: 'Imágenes:',
+                        options: { todo: 'Todo', enviada: 'Enviada', no_enviada: 'No Enviada' }
+                    }
+                };
+
+                filterContainer.innerHTML = ''; // Clear previous
+                for (const group in filterGroups) {
+                    const groupDiv = document.createElement('div');
+                    groupDiv.className = 'flex items-center gap-2 flex-wrap';
+                    
+                    const label = document.createElement('span');
+                    label.className = 'text-sm font-semibold text-slate-500 mr-2';
+                    label.textContent = filterGroups[group].label;
+                    groupDiv.appendChild(label);
+
+                    const optionsDiv = document.createElement('div');
+                    optionsDiv.className = 'flex items-center bg-slate-100 p-1 rounded-full';
+                    
+                    for (const value in filterGroups[group].options) {
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'filter-btn text-sm';
+                        btn.dataset.filterGroup = group;
+                        btn.dataset.filterValue = value;
+                        btn.textContent = filterGroups[group].options[value];
+                        if (appState.filters[group] === value) {
+                            btn.classList.add('active');
+                        }
+                        optionsDiv.appendChild(btn);
+                    }
+                    groupDiv.appendChild(optionsDiv);
+                    filterContainer.appendChild(groupDiv);
+                }
+            }
+
+            function updateConsultationView() {
+                let citasToDisplay = [...appState.data.citas];
+                
+                // 1. Aplicar filtro de búsqueda
+                const searchTerm = searchInput.value.toLowerCase();
+                if (searchTerm) {
+                    citasToDisplay = citasToDisplay.filter(cita =>
+                        Object.values(cita).some(val => String(val).toLowerCase().includes(searchTerm))
+                    );
+                }
+
+                // 2. Aplicar filtros de estado y envío
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                if (appState.filters.status === 'activas') {
+                    citasToDisplay = citasToDisplay.filter(c => new Date(c['Fecha de Estudio'] + 'T00:00:00') >= today);
+                } else if (appState.filters.status === 'inactivas') {
+                    citasToDisplay = citasToDisplay.filter(c => new Date(c['Fecha de Estudio'] + 'T00:00:00') < today);
+                }
+
+                if (appState.filters.enviado === 'enviada') {
+                    citasToDisplay = citasToDisplay.filter(c => c.Enviado && c.Enviado.toLowerCase() === 'si');
+                } else if (appState.filters.enviado === 'no_enviada') {
+                    citasToDisplay = citasToDisplay.filter(c => !c.Enviado || c.Enviado.toLowerCase() !== 'si');
+                }
+                
+                // 3. Aplicar ordenamiento por relevancia operativa
+                citasToDisplay.sort((a, b) => {
+                    const dateA = new Date(a['Fecha de Estudio'] + 'T00:00:00');
+                    const dateB = new Date(b['Fecha de Estudio'] + 'T00:00:00');
+
+                    const getCategory = (date) => {
+                        if (date.getTime() === today.getTime()) return 0; // Hoy
+                        if (date > today) return 1; // Futuro
+                        return 2; // Pasado
+                    };
+
+                    const categoryA = getCategory(dateA);
+                    const categoryB = getCategory(dateB);
+
+                    if (categoryA !== categoryB) return categoryA - categoryB;
+                    
+                    if (categoryA === 1) return dateA - dateB; // Futuro: Ascendente
+                    return dateB - dateA; // Hoy y Pasado: Descendente
+                });
+
+                // 4. Renderizar la tabla
+                renderCitasTable(citasToDisplay);
+            }
+
             function renderCitasTable(citas = []) {
                 citasTableBody.innerHTML = '';
-                if (!citas || citas.length === 0) {
-                    citasTableBody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-500">No hay registros para mostrar.</td></tr>`;
+                if (citas.length === 0) {
+                    citasTableBody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-500">No hay registros que coincidan con los filtros.</td></tr>`;
                     return;
                 }
+                
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
                 citas.forEach(cita => {
                     const row = document.createElement('tr');
-                    row.className = 'hover:bg-slate-50';
+                    const citaDate = new Date(cita['Fecha de Estudio'] + 'T00:00:00');
+                    if (citaDate.getTime() === today.getTime()) {
+                        row.className = 'row-today';
+                    } else {
+                        row.className = 'hover:bg-slate-50';
+                    }
+                    
                     const enviado = cita.Enviado && cita.Enviado.toLowerCase() === 'si';
                     const montoFinal = parseNumber(cita['Monto total Descontado con IVA']);
+                    
                     row.innerHTML = `
                         <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-slate-500">${cita.ID}</td>
                         <td class="whitespace-nowrap py-4 px-3 text-sm font-medium text-slate-900">${cita.Nombre || ''}</td>
@@ -746,13 +883,11 @@
             }
 
             function getCalculatedData() {
-                // AJUSTE QUIRÚRGICO v12.15: Búsqueda de servicio por nombre Y especialidad.
                 const activeEspecialidadBtn = formFields.especialidadContainer.querySelector('.active');
                 const especialidad = activeEspecialidadBtn ? activeEspecialidadBtn.dataset.studyType : null;
                 const selectedService = appState.data.servicios.find(s => 
                     s['Producto o Servicio'] === formFields.tipoEstudio.value && s.Código === especialidad
                 );
-
                 const selectedMetodoPago = appState.data.metodosDePago.find(mp => mp.Tipo === formFields.metodoPago.value);
                 const selectedMedicoReporta = appState.data.medicos.find(m => m.Medico === formFields.medicoReporta.value);
                 
@@ -845,12 +980,22 @@
                     if (action === 'delete') handleDeleteClick(citaId);
                 });
 
-                searchInput.addEventListener('input', () => {
-                    const searchTerm = searchInput.value.toLowerCase();
-                    const filteredCitas = appState.data.citas.filter(cita =>
-                        Object.values(cita).some(val => String(val).toLowerCase().includes(searchTerm))
-                    );
-                    renderCitasTable(filteredCitas);
+                searchInput.addEventListener('input', updateConsultationView);
+                
+                filterContainer.addEventListener('click', (e) => {
+                    const button = e.target.closest('.filter-btn');
+                    if (!button) return;
+                    const group = button.dataset.filterGroup;
+                    const value = button.dataset.filterValue;
+
+                    appState.filters[group] = value;
+
+                    // Update active state for buttons in the same group
+                    button.parentElement.querySelectorAll('.filter-btn').forEach(btn => {
+                        btn.classList.toggle('active', btn.dataset.filterValue === value);
+                    });
+                    
+                    updateConsultationView();
                 });
             }
             
@@ -887,7 +1032,6 @@
                     const method = appState.isEditing ? 'PUT' : 'POST';
                     
                     if (appState.isOffline) {
-                        // --- OFFLINE CRUD LOGIC ---
                         if(appState.isEditing) {
                             const index = appState.data.citas.findIndex(c => String(c.ID) === String(payload.ID));
                             if (index > -1) appState.data.citas[index] = payload;
@@ -898,8 +1042,8 @@
                        await apiCall(endpoint, { method, body: JSON.stringify(payload) });
                        await fetchData();
                     }
-
-                    renderCitasTable(appState.data.citas);
+                    
+                    updateConsultationView();
                     resetForm();
                     showView('consultar');
                     showNotification(`Registro ${appState.isEditing ? 'actualizado' : 'guardado'} con éxito.`);
@@ -928,7 +1072,7 @@
                 Object.values(formFields).forEach(field => {
                     if (field.id === 'especialidad') {
                         field.querySelectorAll('button').forEach(btn => btn.disabled = disabled);
-                    } else if (field.tagName === 'DIV') { // For especialidad container
+                    } else if (field.tagName === 'DIV') {
                         field.querySelectorAll('button').forEach(btn => btn.disabled = disabled);
                     } else {
                         field.disabled = disabled;
@@ -1019,7 +1163,7 @@
                             await apiCall('/.netlify/functions/delete-cita', { method: 'DELETE', body: JSON.stringify(payload) });
                             await fetchData();
                         }
-                        renderCitasTable(appState.data.citas);
+                        updateConsultationView();
                         showNotification('Registro eliminado con éxito.');
                     } catch (error) {
                         console.error('Delete Error:', error);
@@ -1044,4 +1188,6 @@
     </script>
 </body>
 </html>
+
+
 
