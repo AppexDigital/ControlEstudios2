@@ -766,13 +766,12 @@
                 }
 
                 // 2. Aplicar filtros de estado y envío
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
+                const todayStr = new Date().toISOString().split('T')[0];
 
                 if (appState.filters.status === 'activas') {
-                    citasToDisplay = citasToDisplay.filter(c => new Date(c['Fecha de Estudio'] + 'T00:00:00') >= today);
+                    citasToDisplay = citasToDisplay.filter(c => c['Fecha de Estudio'] >= todayStr);
                 } else if (appState.filters.status === 'inactivas') {
-                    citasToDisplay = citasToDisplay.filter(c => new Date(c['Fecha de Estudio'] + 'T00:00:00') < today);
+                    citasToDisplay = citasToDisplay.filter(c => c['Fecha de Estudio'] < todayStr);
                 }
 
                 if (appState.filters.enviado === 'enviada') {
@@ -785,6 +784,8 @@
                 citasToDisplay.sort((a, b) => {
                     const dateA = new Date(a['Fecha de Estudio'] + 'T00:00:00');
                     const dateB = new Date(b['Fecha de Estudio'] + 'T00:00:00');
+                    const today = new Date();
+                    today.setHours(0,0,0,0);
 
                     const getCategory = (date) => {
                         if (date.getTime() === today.getTime()) return 0; // Hoy
@@ -1188,6 +1189,7 @@
     </script>
 </body>
 </html>
+
 
 
 
