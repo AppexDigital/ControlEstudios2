@@ -909,12 +909,14 @@
 
                 const montoTotalDescontado$ = precioBaseCliente$ * (1 - descuento);
                 const iva$ = montoTotalDescontado$ * ivaPercent;
-                const cobrar$ = montoTotalDescontado$ + iva$;
+                // AJUSTE v12.23: Se calcula el fee sobre el subtotal antes de sumarlo al total.
+                const montoSubtotal$ = montoTotalDescontado$ + iva$;
+                const feeCalculado$ = montoSubtotal$ * feePercent;
+                const cobrar$ = montoSubtotal$ + feeCalculado$; // El total a cobrar SÍ incluye el fee.
                 const cobrarCRC = cobrar$ * tipoCambio;
                 
                 let comision$ = 0;
                 if (selectedService && porcentajeComision > 0) {
-                    const feeCalculado$ = cobrar$ * feePercent; 
                     if (selectedService.Cobro === 'Especial') {
                         const baseComisionEspecial$ = parseNumber(selectedService['Base para comisión']);
                         const montoPagarEspecial$ = parseNumber(selectedService['Moto a pagar']);
@@ -934,7 +936,7 @@
                 
                 return {
                     'Monto Total': precioBaseCliente$, Descuento: descuento, 'Monto Total Descontado': montoTotalDescontado$,
-                    IVA: iva$, Fee: 0, 'Monto total Descontado con IVA': cobrar$, 'Tipo de cambio': tipoCambio,
+                    IVA: iva$, Fee: feeCalculado$, 'Monto total Descontado con IVA': cobrar$, 'Tipo de cambio': tipoCambio,
                     'Cobrar ₡': cobrarCRC, 'Cobrar $': cobrar$, 'Porcentaje de comisión': porcentajeComision,
                     'Comisión en Colones': comisionCRC, 'Comisión en Dólares': comision$, 'Debito Fiscal': debitoFiscal,
                     'Crédito Fiscal': creditoFiscal, 'IVA Pagado a Hacienda': ivaPagadoHacienda,
@@ -1195,6 +1197,8 @@
     </script>
 </body>
 </html>
+
+
 
 
 
