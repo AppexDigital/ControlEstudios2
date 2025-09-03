@@ -1,7 +1,3 @@
-
-
-
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -227,6 +223,7 @@
             <!-- Vista de Registro de Exámen -->
             <div id="registrar-view" class="min-h-full">
                 <form id="cita-form" class="bg-color-card p-6 sm:p-8 rounded-2xl shadow-xl border border-color-border w-full max-w-full pb-24 md:pb-8">
+                    <!-- Hidden field for internal ID tracking -->
                     <input type="hidden" id="cita-id">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-x-8 gap-y-6">
                         
@@ -260,6 +257,10 @@
                         <!-- Columna 2 -->
                         <div class="space-y-6 flex flex-col">
                              <h3 class="form-section-title"><span class="material-symbols-outlined">medical_information</span>Detalles del Exámen</h3>
+                             <div>
+                                <label class="label" for="registro-id-display">ID de Registro</label>
+                                <input id="registro-id-display" type="text" class="input-field w-full readonly-field" readonly>
+                             </div>
                              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label class="label" for="medico-refiere">Doctor Refiere</label>
@@ -353,6 +354,7 @@
                         <table class="min-w-full divide-y divide-slate-200">
                             <thead class="bg-slate-50">
                                 <tr>
+                                    <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-slate-600">ID</th>
                                     <th scope="col" class="py-3.5 px-3 text-left text-sm font-semibold text-slate-600">Paciente</th>
                                     <th scope="col" class="py-3.5 px-3 text-left text-sm font-semibold text-slate-600">Fecha</th>
                                     <th scope="col" class="py-3.5 px-3 text-left text-sm font-semibold text-slate-600">Servicio</th>
@@ -442,6 +444,7 @@
 
             const formFields = {
                 id: document.getElementById('cita-id'),
+                idDisplay: document.getElementById('registro-id-display'), // Campo visible para el ID
                 nombre: document.getElementById('nombre'),
                 identificacion: document.getElementById('identificacion'),
                 especialidadContainer: document.getElementById('especialidad'),
@@ -679,7 +682,7 @@
             function renderCitasTable(citas = []) {
                 citasTableBody.innerHTML = '';
                 if (!citas || citas.length === 0) {
-                    citasTableBody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-500">No hay registros para mostrar.</td></tr>`;
+                    citasTableBody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-500">No hay registros para mostrar.</td></tr>`;
                     return;
                 }
                 citas.forEach(cita => {
@@ -688,6 +691,7 @@
                     const enviado = cita.Enviado && cita.Enviado.toLowerCase() === 'si';
                     const montoFinal = parseNumber(cita['Monto total Descontado con IVA']);
                     row.innerHTML = `
+                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-slate-500">${cita.ID}</td>
                         <td class="whitespace-nowrap py-4 px-3 text-sm font-medium text-slate-900">${cita.Nombre || ''}</td>
                         <td class="whitespace-nowrap py-4 px-3 text-sm text-slate-600">${cita['Fecha de Estudio'] || ''}</td>
                         <td class="py-4 px-3 text-sm text-slate-600">${cita['Tipo de Estudio'] || ''}</td>
@@ -726,12 +730,12 @@
             // =================================================================================
             
             function generateUniqueNumericId() {
-                const existingIds = new Set(appState.data.citas.map(c => c.ID));
+                const existingIds = new Set(appState.data.citas.map(c => String(c.ID)));
                 let newId;
                 do {
                     newId = Math.floor(10000000 + Math.random() * 90000000);
                 } while (existingIds.has(String(newId)));
-                return newId;
+                return String(newId);
             }
 
             function calculateAll() {
@@ -865,7 +869,7 @@
                     const calculatedData = getCalculatedData();
                     const citaData = {
                         ...calculatedData,
-                        ID: appState.isEditing ? parseNumber(formFields.id.value) : generateUniqueNumericId(),
+                        ID: formFields.id.value,
                         Enviado: formFields.enviado.checked ? 'Si' : 'No',
                         'Fecha de Estudio': formFields.fechaEstudio.value,
                         Nombre: formFields.nombre.value,
@@ -922,7 +926,9 @@
             function setFormState(disabled) {
                 appState.isViewing = disabled;
                 Object.values(formFields).forEach(field => {
-                    if (field.id === 'especialidad') {
+                    if (field.id === 'especialidad' || field.id === 'registro-id-display') {
+                         field.disabled = disabled;
+                    } else if (field.tagName === 'DIV') { // For especialidad container
                         field.querySelectorAll('button').forEach(btn => btn.disabled = disabled);
                     } else {
                         field.disabled = disabled;
@@ -943,7 +949,10 @@
             
             function resetForm() {
                 citaForm.reset();
-                formFields.id.value = '';
+                const newId = generateUniqueNumericId();
+                formFields.id.value = newId;
+                formFields.idDisplay.value = newId;
+
                 appState.isEditing = false;
                 appState.isViewing = false;
                 const today = new Date().toISOString().split('T')[0];
@@ -959,8 +968,8 @@
                 const cita = appState.data.citas.find(c => String(c.ID) === String(citaId));
                 if (!cita) return;
 
-                // Setear valores que no dependen de otros
                 formFields.id.value = cita.ID;
+                formFields.idDisplay.value = cita.ID;
                 formFields.nombre.value = cita.Nombre;
                 formFields.identificacion.value = cita.Identificación;
                 formFields.fechaEstudio.value = cita['Fecha de Estudio'];
@@ -969,19 +978,16 @@
                 formFields.enviado.checked = cita.Enviado && cita.Enviado.toLowerCase() === 'si';
                 formFields.descuento.value = cita.Descuento || "";
                 
-                // Cambiar la especialidad y poblar la lista de servicios
                 formFields.especialidadContainer.querySelectorAll('button').forEach(btn => {
                     btn.classList.toggle('active', btn.dataset.studyType === cita.Especialidad);
                 });
                 handleEspecialidadChange();
                 
-                // AHORA que el select está poblado, podemos setear el valor de forma segura y síncrona
                 formFields.tipoEstudio.value = cita['Tipo de Estudio'];
                 formFields.medicoRefiere.value = cita['Medico que Refiere'];
                 formFields.medicoReporta.value = cita['Medico que Reporta'];
                 formFields.metodoPago.value = cita['Método pago'];
 
-                // Finalmente, calcular todo con los datos correctos ya en el formulario
                 calculateAll();
             }
 
@@ -1007,7 +1013,6 @@
                     showLoader(true);
                     try {
                         if (appState.isOffline) {
-                            // --- OFFLINE CRUD LOGIC ---
                             appState.data.citas = appState.data.citas.filter(c => String(c.ID) !== String(citaId));
                         } else {
                             const payload = { ID: cita.ID, tipoEstudio: cita.Especialidad };
