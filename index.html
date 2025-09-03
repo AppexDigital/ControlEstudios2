@@ -257,10 +257,6 @@
                         <!-- Columna 2 -->
                         <div class="space-y-6 flex flex-col">
                              <h3 class="form-section-title"><span class="material-symbols-outlined">medical_information</span>Detalles del Exámen</h3>
-                             <div>
-                                <label class="label" for="registro-id-display">ID de Registro</label>
-                                <input id="registro-id-display" type="text" class="input-field w-full readonly-field" readonly>
-                             </div>
                              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label class="label" for="medico-refiere">Doctor Refiere</label>
@@ -321,13 +317,17 @@
                     
                     <!-- Acciones del Formulario -->
                     <div class="flex flex-col sm:flex-row justify-between items-center pt-6 mt-6 border-t-2 border-color-border gap-4">
-                         <div class="flex items-center self-start sm:self-center">
-                            <input id="enviado" type="checkbox" class="h-5 w-5 rounded border-gray-300 text-color-secondary focus:ring-color-secondary focus:ring-2">
-                            <label for="enviado" class="ml-3 block text-sm font-medium text-color-text-primary">
-                                Marcar como "Imágenes Enviadas"
-                            </label>
+                        <div class="flex-1 flex items-center gap-4">
+                            <div class="flex items-center">
+                                <input id="enviado" type="checkbox" class="h-5 w-5 rounded border-gray-300 text-color-secondary focus:ring-color-secondary focus:ring-2">
+                                <label for="enviado" class="ml-3 block text-sm font-medium text-color-text-primary">Marcar como "Imágenes Enviadas"</label>
+                            </div>
+                            <div id="id-display-container" class="hidden sm:block">
+                                <span class="text-sm font-medium text-slate-500">ID:</span>
+                                <span id="id-display-text" class="font-bold text-slate-800"></span>
+                            </div>
                         </div>
-                        <div class="flex gap-4 w-full sm:w-auto">
+                        <div class="flex gap-4 w-full sm:w-auto self-end">
                             <button type="button" id="clear-form-btn" class="btn-secondary w-full sm:w-auto py-3 px-8 rounded-lg text-lg flex items-center justify-center gap-2">
                                 <span class="material-symbols-outlined">cleaning_services</span>
                                 <span>Limpiar</span>
@@ -430,6 +430,7 @@
             const clearFormBtn = document.getElementById('clear-form-btn');
             const notificationContainer = document.getElementById('notification-container');
             const confirmationModal = document.getElementById('confirmation-modal');
+            const idDisplayText = document.getElementById('id-display-text');
             
             const nav = {
                 registrar: document.getElementById('nav-registrar'),
@@ -444,7 +445,6 @@
 
             const formFields = {
                 id: document.getElementById('cita-id'),
-                idDisplay: document.getElementById('registro-id-display'), // Campo visible para el ID
                 nombre: document.getElementById('nombre'),
                 identificacion: document.getElementById('identificacion'),
                 especialidadContainer: document.getElementById('especialidad'),
@@ -926,8 +926,8 @@
             function setFormState(disabled) {
                 appState.isViewing = disabled;
                 Object.values(formFields).forEach(field => {
-                    if (field.id === 'especialidad' || field.id === 'registro-id-display') {
-                         field.disabled = disabled;
+                    if (field.id === 'especialidad') {
+                        field.querySelectorAll('button').forEach(btn => btn.disabled = disabled);
                     } else if (field.tagName === 'DIV') { // For especialidad container
                         field.querySelectorAll('button').forEach(btn => btn.disabled = disabled);
                     } else {
@@ -951,7 +951,7 @@
                 citaForm.reset();
                 const newId = generateUniqueNumericId();
                 formFields.id.value = newId;
-                formFields.idDisplay.value = newId;
+                idDisplayText.textContent = newId;
 
                 appState.isEditing = false;
                 appState.isViewing = false;
@@ -969,7 +969,7 @@
                 if (!cita) return;
 
                 formFields.id.value = cita.ID;
-                formFields.idDisplay.value = cita.ID;
+                idDisplayText.textContent = cita.ID;
                 formFields.nombre.value = cita.Nombre;
                 formFields.identificacion.value = cita.Identificación;
                 formFields.fechaEstudio.value = cita['Fecha de Estudio'];
