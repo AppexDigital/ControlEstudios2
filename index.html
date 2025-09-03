@@ -1,3 +1,7 @@
+
+
+
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -738,11 +742,16 @@
             }
 
             function getCalculatedData() {
-                const selectedService = appState.data.servicios.find(s => s['Producto o Servicio'] === formFields.tipoEstudio.value);
+                // AJUSTE QUIRÚRGICO v12.15: Búsqueda de servicio por nombre Y especialidad.
+                const activeEspecialidadBtn = formFields.especialidadContainer.querySelector('.active');
+                const especialidad = activeEspecialidadBtn ? activeEspecialidadBtn.dataset.studyType : null;
+                const selectedService = appState.data.servicios.find(s => 
+                    s['Producto o Servicio'] === formFields.tipoEstudio.value && s.Código === especialidad
+                );
+
                 const selectedMetodoPago = appState.data.metodosDePago.find(mp => mp.Tipo === formFields.metodoPago.value);
                 const selectedMedicoReporta = appState.data.medicos.find(m => m.Medico === formFields.medicoReporta.value);
                 
-                // AJUSTE QUIRÚRGICO v12.14: Se asegura de usar siempre la columna 'Precio' para el cliente.
                 const precioBaseCliente$ = selectedService ? parseNumber(selectedService['Precio']) : 0;
                 
                 const descuento = parseNumber(formFields.descuento.value);
@@ -757,7 +766,6 @@
                 const cobrar$ = montoTotalDescontado$ + iva$;
                 const cobrarCRC = cobrar$ * tipoCambio;
                 
-                // --- Lógica de comisiones aislada (sin cambios, ya era correcta) ---
                 let comision$ = 0;
                 if (selectedService && porcentajeComision > 0) {
                     const feeCalculado$ = cobrar$ * feePercent; 
@@ -769,7 +777,7 @@
                             const parte2 = ((montoPagarEspecial$ * (1 - descuento)) * (1 + tasaIVAMedico)) - ((montoPagarEspecial$ / precioBaseCliente$) * feeCalculado$);
                             comision$ = (parte1 * porcentajeComision) + parte2;
                         }
-                    } else { // Cobro Normal
+                    } else { 
                         comision$ = (cobrar$ - feeCalculado$) * porcentajeComision;
                     }
                 }
@@ -1031,6 +1039,4 @@
     </script>
 </body>
 </html>
-
-
 
