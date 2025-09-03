@@ -918,7 +918,7 @@
                             comision$ = (parte1 * porcentajeComision) + parte2;
                         }
                     } else { 
-                        comision$ = (cobrar$ - feeCalculado$) * porcentajeComision;
+                        comision$ = ((cobrar$ - feeCalculado$) * porcentajeComision) * (1 + tasaIVAMedico);
                     }
                 }
                 const comisionCRC = comision$ * tipoCambio;
@@ -1189,7 +1189,4 @@
     </script>
 </body>
 </html>
-
-
-
 
