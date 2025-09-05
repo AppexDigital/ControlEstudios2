@@ -898,7 +898,7 @@
                 const selectedMetodoPago = appState.data.metodosDePago.find(mp => mp.Tipo === formFields.metodoPago.value);
                 const selectedMedicoReporta = appState.data.medicos.find(m => m.Medico === formFields.medicoReporta.value);
                 
-                const precioBaseCliente$ = selectedService ? parseNumber(selectedService['Precio']) : 0;
+                const precioBaseCliente_cents = Math.round((selectedService ? parseNumber(selectedService['Precio']) : 0) * 100);
                 
                 const descuento = parseNumber(formFields.descuento.value);
                 const tipoCambio = parseNumber(formFields.tipoCambio.value);
@@ -907,40 +907,56 @@
                 const porcentajeComision = selectedMedicoReporta ? parsePercent(selectedMedicoReporta.Comisión) : 0;
                 const tasaIVAMedico = 0.04;
 
-                const montoTotalDescontado$ = precioBaseCliente$ * (1 - descuento);
-                const iva$ = montoTotalDescontado$ * ivaPercent;
-                // AJUSTE v12.24: cobrar$ es el monto final para el cliente, NO incluye el Fee.
-                const cobrar$ = montoTotalDescontado$ + iva$;
-                // El Fee se calcula sobre el monto que paga el cliente.
-                const feeCalculado$ = cobrar$ * feePercent;
-                const cobrarCRC = cobrar$ * tipoCambio;
+                const montoTotalDescontado_cents = Math.round(precioBaseCliente_cents * (1 - descuento));
+                const iva_cents = Math.round(montoTotalDescontado_cents * ivaPercent);
+                const cobrar_cents = montoTotalDescontado_cents + iva_cents;
+                const feeCalculado_cents = Math.round(cobrar_cents * feePercent);
                 
-                let comision$ = 0;
+                let comision_cents = 0;
                 if (selectedService && porcentajeComision > 0) {
                     if (selectedService.Cobro === 'Especial') {
-                        const baseComisionEspecial$ = parseNumber(selectedService['Base para comisión']);
-                        const montoPagarEspecial$ = parseNumber(selectedService['Moto a pagar']);
-                        if (precioBaseCliente$ > 0) {
-                            const parte1 = ((baseComisionEspecial$ * (1 - descuento)) * (1 + tasaIVAMedico)) - ((baseComisionEspecial$ / precioBaseCliente$) * feeCalculado$);
-                            const parte2 = ((montoPagarEspecial$ * (1 - descuento)) * (1 + tasaIVAMedico)) - ((montoPagarEspecial$ / precioBaseCliente$) * feeCalculado$);
-                            comision$ = (parte1 * porcentajeComision) + parte2;
+                        const baseComisionEspecial_cents = Math.round(parseNumber(selectedService['Base para comisión']) * 100);
+                        const montoPagarEspecial_cents = Math.round(parseNumber(selectedService['Moto a pagar']) * 100);
+                        
+                        if (precioBaseCliente_cents > 0) {
+                            const parte1_base = Math.round(baseComisionEspecial_cents * (1 - descuento));
+                            const parte1_iva = Math.round(parte1_base * (1 + tasaIVAMedico));
+                            const parte1_fee = Math.round((baseComisionEspecial_cents / precioBaseCliente_cents) * feeCalculado_cents);
+                            const parte1_final = parte1_iva - parte1_fee;
+                            
+                            const parte2_base = Math.round(montoPagarEspecial_cents * (1 - descuento));
+                            const parte2_iva = Math.round(parte2_base * (1 + tasaIVAMedico));
+                            const parte2_fee = Math.round((montoPagarEspecial_cents / precioBaseCliente_cents) * feeCalculado_cents);
+                            const parte2_final = parte2_iva - parte2_fee;
+
+                            comision_cents = Math.round(parte1_final * porcentajeComision) + parte2_final;
                         }
                     } else { // Cobro Normal
-                        comision$ = ((montoTotalDescontado$ - feeCalculado$) * porcentajeComision) * (1 + tasaIVAMedico);
+                        const baseComisionNormal_cents = montoTotalDescontado_cents - feeCalculado_cents;
+                        const comisionSinIva_cents = Math.round(baseComisionNormal_cents * porcentajeComision);
+                        comision_cents = Math.round(comisionSinIva_cents * (1 + tasaIVAMedico));
                     }
                 }
-                const comisionCRC = comision$ * tipoCambio;
-                const debitoFiscal = iva$;
-                const creditoFiscal = (comision$ / (1 + tasaIVAMedico)) * tasaIVAMedico;
-                const ivaPagadoHacienda = debitoFiscal - creditoFiscal;
-                
+
                 return {
-                    'Monto Total': precioBaseCliente$, Descuento: descuento, 'Monto Total Descontado': montoTotalDescontado$,
-                    IVA: iva$, Fee: feeCalculado$, 'Monto total Descontado con IVA': cobrar$, 'Tipo de cambio': tipoCambio,
-                    'Cobrar ₡': cobrarCRC, 'Cobrar $': cobrar$, 'Porcentaje de comisión': porcentajeComision,
-                    'Comisión en Colones': comisionCRC, 'Comisión en Dólares': comision$, 'Debito Fiscal': debitoFiscal,
-                    'Crédito Fiscal': creditoFiscal, 'IVA Pagado a Hacienda': ivaPagadoHacienda,
-                    montoTotal$: precioBaseCliente$, cobrar$, cobrarCRC
+                    'Monto Total': precioBaseCliente_cents / 100,
+                    Descuento: descuento,
+                    'Monto Total Descontado': montoTotalDescontado_cents / 100,
+                    IVA: iva_cents / 100,
+                    Fee: feeCalculado_cents / 100,
+                    'Monto total Descontado con IVA': cobrar_cents / 100,
+                    'Tipo de cambio': tipoCambio,
+                    'Cobrar ₡': (cobrar_cents / 100) * tipoCambio,
+                    'Cobrar $': cobrar_cents / 100,
+                    'Porcentaje de comisión': porcentajeComision,
+                    'Comisión en Colones': (comision_cents / 100) * tipoCambio,
+                    'Comisión en Dólares': comision_cents / 100,
+                    'Debito Fiscal': iva_cents / 100,
+                    'Crédito Fiscal': (comision_cents - Math.round(comision_cents / (1 + tasaIVAMedico))) / 100,
+                    'IVA Pagado a Hacienda': (iva_cents - (comision_cents - Math.round(comision_cents / (1 + tasaIVAMedico)))) / 100,
+                    montoTotal$: precioBaseCliente_cents / 100,
+                    cobrar$: cobrar_cents / 100,
+                    cobrarCRC: (cobrar_cents / 100) * tipoCambio
                 };
             }
             
@@ -999,7 +1015,6 @@
 
                     appState.filters[group] = value;
 
-                    // Update active state for buttons in the same group
                     button.parentElement.querySelectorAll('.filter-btn').forEach(btn => {
                         btn.classList.toggle('active', btn.dataset.filterValue === value);
                     });
@@ -1197,8 +1212,4 @@
     </script>
 </body>
 </html>
-
-
-
-
 
