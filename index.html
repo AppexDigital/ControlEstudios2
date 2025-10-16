@@ -949,7 +949,7 @@
                         
                         const comisionBaseOriginal = appState.paymentCurrency === 'USD' ? precioBaseUSD : precioBaseCRC;
 
-                        if (appState.manualPriceOverride !== null) {
+                        if (appState.manualPriceOverride !== null && appState.manualPriceOverride > 0) {
                             const diff = appState.manualPriceOverride - comisionBaseOriginal;
                             baseParaComisionEspecial += diff;
                         }
@@ -957,17 +957,17 @@
                         if (baseParaComisionEspecial > 0) {
                             const parte1_base = baseParaComisionEspecial * (1 - descuento);
                             const parte1_iva = parte1_base * (1 + tasaIVAMedico);
-                            const parte1_fee_proporcional = (baseParaComisionEspecial / effectiveBase) * fee;
+                            const parte1_fee_proporcional = (effectiveBase > 0) ? (baseParaComisionEspecial / effectiveBase) * fee : 0;
                             const parte1_final = parte1_iva - parte1_fee_proporcional;
 
                             const parte2_base = montoAPagarFijo * (1 - descuento);
                             const parte2_iva = parte2_base * (1 + tasaIVAMedico);
-                            const parte2_fee_proporcional = (montoAPagarFijo / effectiveBase) * fee;
+                            const parte2_fee_proporcional = (effectiveBase > 0) ? (montoAPagarFijo / effectiveBase) * fee : 0;
                             const parte2_final = parte2_iva - parte2_fee_proporcional;
 
                             comision = (parte1_final * porcentajeComision) + parte2_final;
                         }
-                    } else { // Cobro "Normal" - CORREGIDO
+                    } else { // Cobro "Normal"
                         const baseConIvaMedico = montoTotalDescontado * (1 + tasaIVAMedico);
                         const baseNeta = baseConIvaMedico - fee;
                         comision = baseNeta * porcentajeComision;
@@ -1226,23 +1226,42 @@
                 const cita = appState.data.citas.find(c => String(c.ID) === String(citaId));
                 if (!cita) return;
 
+                // Set currency first as it affects price comparison
+                appState.paymentCurrency = (cita['Moneda de Pago'] === 'Colones') ? 'CRC' : 'USD';
+                formFields.currencySelector.querySelectorAll('button').forEach(btn => btn.classList.toggle('active', btn.dataset.currency === appState.paymentCurrency));
+
+                // Find the original service to compare prices
+                const originalService = appState.data.servicios.find(s => 
+                    s['Producto o Servicio'] === cita['Tipo de Estudio'] && s.Código === cita.Especialidad
+                );
+                
+                appState.manualPriceOverride = null;
+                resumenFields.resetPriceBtn.classList.add('hidden');
+
+                if (originalService) {
+                    const savedTotal = parseNumber(cita['Monto Total']);
+                    const basePriceForCurrency = appState.paymentCurrency === 'USD' 
+                        ? parseNumber(originalService['Precio Dolares']) 
+                        : parseNumber(originalService['Precio Colones']);
+
+                    // Use a small tolerance for floating point comparisons
+                    if (Math.abs(savedTotal - basePriceForCurrency) > 0.01) {
+                        appState.manualPriceOverride = savedTotal;
+                        resumenFields.resetPriceBtn.classList.remove('hidden');
+                    }
+                } else {
+                    // Fallback if service not found: assume the saved price is the override
+                    appState.manualPriceOverride = parseNumber(cita['Monto Total']);
+                    resumenFields.resetPriceBtn.classList.remove('hidden');
+                }
+                
                 formFields.id.value = cita.ID;
                 idDisplayText.textContent = cita.ID;
                 formFields.nombre.value = cita.Nombre;
                 formFields.identificacion.value = cita.Identificación;
                 formFields.fechaEstudio.value = cita['Fecha de Estudio'];
-                formFields.registra.textContent = cita['Descuento aplicado por'] || cita['Usuario que registra'] || 'N/A';
+                formFields.registra.textContent = cita['Descuento aplicado por'] || 'N/A';
                 
-                appState.paymentCurrency = (cita['Moneda de Pago'] === 'Colones') ? 'CRC' : 'USD';
-                formFields.currencySelector.querySelectorAll('button').forEach(btn => btn.classList.toggle('active', btn.dataset.currency === appState.paymentCurrency));
-                
-                appState.manualPriceOverride = parseNumber(cita['Monto Total']);
-                if (parseNumber(cita['Monto Total']) !== (appState.paymentCurrency === 'USD' ? parseNumber(cita.precioBaseUSD) : parseNumber(cita.precioBaseCRC))) {
-                    resumenFields.resetPriceBtn.classList.remove('hidden');
-                } else {
-                    resumenFields.resetPriceBtn.classList.add('hidden');
-                }
-
                 formFields.enviado.checked = cita.Enviado && cita.Enviado.toLowerCase() === 'si';
                 formFields.descuento.value = cita.Descuento || "";
                 
@@ -1327,7 +1346,6 @@
     </script>
 </body>
 </html>
-
 
 
 
