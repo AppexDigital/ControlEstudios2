@@ -461,7 +461,7 @@
                 isOffline: false,
                 listenersAttached: false,
                 paymentCurrency: 'USD',
-                manualPriceOverride: null, // Almacena el valor manual si existe
+                manualPriceOverride: null,
                 filters: {
                     status: 'activas', // 'todo', 'activas', 'inactivas'
                     enviado: 'todo'    // 'todo', 'enviada', 'no_enviada'
@@ -847,9 +847,9 @@
                     row.className = cita['Fecha de Estudio'] === todayStr ? 'row-today' : 'hover:bg-slate-50';
                     const enviado = cita.Enviado && cita.Enviado.toLowerCase() === 'si';
                     
-                    const monto = parseNumber(cita['Monto total Descontado con IVA']);
-                    const moneda = cita['Moneda de Pago'];
-                    const montoFinal = (moneda === 'Colones' || moneda === 'CRC') ? formatCRC(monto) : formatUSD(monto);
+                    const montoFinal = cita['Moneda de Pago'] === 'Colones' 
+                        ? formatCRC(parseNumber(cita['Monto total Descontado con IVA'])) 
+                        : formatUSD(parseNumber(cita['Monto total Descontado con IVA']));
                     
                     row.innerHTML = `
                         <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-slate-500">${cita.ID}</td>
@@ -887,7 +887,7 @@
             }
             
             // =================================================================================
-            // FORM LOGIC & CALCULATIONS (REFACTORED)
+            // FORM LOGIC & CALCULATIONS
             // =================================================================================
             
             function generateUniqueNumericId() {
@@ -900,14 +900,13 @@
             }
 
             function calculateAll() {
-                const { montoTotal, montoTotalUSD, montoTotalCRC } = getCalculatedData();
-                resumenFields.baseUsd.value = formatUSD(montoTotalUSD);
-                resumenFields.baseCrc.value = formatCRC(montoTotalCRC);
-                updateFinalTotalDisplay();
+                const calculatedData = getCalculatedData();
+                resumenFields.baseUsd.value = formatUSD(calculatedData.precioBaseUSD);
+                resumenFields.baseCrc.value = formatCRC(calculatedData.precioBaseCRC);
+                updateFinalTotalDisplay(calculatedData);
             }
 
             function getCalculatedData() {
-                // --- 1. Get Selections ---
                 const activeEspecialidadBtn = formFields.especialidadContainer.querySelector('.active');
                 const especialidad = activeEspecialidadBtn ? activeEspecialidadBtn.dataset.studyType : null;
                 const selectedService = appState.data.servicios.find(s => 
@@ -916,17 +915,16 @@
                 const selectedMetodoPago = appState.data.metodosDePago.find(mp => mp.Tipo === formFields.metodoPago.value);
                 const selectedMedicoReporta = appState.data.medicos.find(m => m.Medico === formFields.medicoReporta.value);
                 
-                // --- 2. Get Base Prices & Parameters ---
                 const precioBaseUSD = selectedService ? parseNumber(selectedService['Precio Dolares']) : 0;
                 const precioBaseCRC = selectedService ? parseNumber(selectedService['Precio Colones']) : 0;
+                const tipoCambio = (precioBaseUSD > 0 && precioBaseCRC > 0) ? (precioBaseCRC / precioBaseUSD) : 520;
 
                 const descuento = parseNumber(formFields.descuento.value);
                 const ivaPercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.IVA) : 0;
                 const feePercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.Fees) : 0;
                 const porcentajeComision = selectedMedicoReporta ? parsePercent(selectedMedicoReporta.Comisión) : 0;
                 const tasaIVAMedico = 0.04;
-
-                // --- 3. Determine Effective Base Price in Selected Currency ---
+                
                 let effectiveBase;
                 if (appState.manualPriceOverride !== null) {
                     effectiveBase = appState.manualPriceOverride;
@@ -934,17 +932,13 @@
                     effectiveBase = appState.paymentCurrency === 'USD' ? precioBaseUSD : precioBaseCRC;
                 }
 
-                // --- 4. Core Financial Calculations in Selected Currency ---
                 const montoTotalDescontado = effectiveBase * (1 - descuento);
                 const iva = montoTotalDescontado * ivaPercent;
-                const montoTotalDescontadoConIVA = montoTotalDescontado + iva;
-                const fee = montoTotalDescontadoConIVA * feePercent;
-
-                // --- 5. Commission Calculation in Selected Currency ---
+                const montoTotalDescontadoConIva = montoTotalDescontado + iva;
+                const fee = montoTotalDescontadoConIva * feePercent;
+                
                 let comision = 0;
                 if (selectedService && porcentajeComision > 0) {
-                    const comisionBase = appState.paymentCurrency === 'USD' ? precioBaseUSD : precioBaseCRC;
-
                     if (selectedService.Cobro === 'Especial') {
                         let baseParaComisionEspecial = appState.paymentCurrency === 'USD' 
                             ? parseNumber(selectedService['Base para comisión Dolares'])
@@ -953,9 +947,10 @@
                             ? parseNumber(selectedService['Monto a pagar Dolares'])
                             : parseNumber(selectedService['Monto a pagar Colones']);
                         
-                        // Adjust commission base if price was manually overridden
+                        const comisionBaseOriginal = appState.paymentCurrency === 'USD' ? precioBaseUSD : precioBaseCRC;
+
                         if (appState.manualPriceOverride !== null) {
-                            const diff = appState.manualPriceOverride - comisionBase;
+                            const diff = appState.manualPriceOverride - comisionBaseOriginal;
                             baseParaComisionEspecial += diff;
                         }
 
@@ -972,29 +967,28 @@
 
                             comision = (parte1_final * porcentajeComision) + parte2_final;
                         }
-                    } else { // Cobro "Normal"
-                        const baseDescontadaComision = comisionBase * (1 - descuento);
-                        const ivaTotalCalculadoSobreBaseOriginal = (baseDescontadaComision * (1 + ivaPercent)) * feePercent;
-                        const baseConIvaMedico = baseDescontadaComision * (1 + tasaIVAMedico);
-                        const baseNeta = baseConIvaMedico - ivaTotalCalculadoSobreBaseOriginal;
+                    } else { // Cobro "Normal" - CORREGIDO
+                        const baseConIvaMedico = montoTotalDescontado * (1 + tasaIVAMedico);
+                        const baseNeta = baseConIvaMedico - fee;
                         comision = baseNeta * porcentajeComision;
                     }
                 }
                 const comisionFinal = Math.round(comision * 100) / 100;
                 
-                const tipoCambio = (precioBaseUSD > 0 && precioBaseCRC > 0) ? (precioBaseCRC / precioBaseUSD) : 520;
-
                 return {
-                    montoTotal: effectiveBase,
-                    montoTotalUSD: appState.paymentCurrency === 'USD' ? effectiveBase : effectiveBase / tipoCambio,
-                    montoTotalCRC: appState.paymentCurrency === 'CRC' ? effectiveBase : effectiveBase * tipoCambio,
-                    montoTotalDescontado: montoTotalDescontado,
-                    IVA: iva,
-                    Fee: fee,
-                    'Monto total Descontado con IVA': montoTotalDescontadoConIVA,
+                    'Moneda de Pago': appState.paymentCurrency === 'USD' ? 'Dólares' : 'Colones',
+                    'Monto Total': effectiveBase,
+                    'Descuento': descuento,
+                    'Monto Total Descontado': montoTotalDescontado,
+                    'Método pago': formFields.metodoPago.value,
+                    'IVA': iva,
+                    'Fee': fee,
+                    'Monto total Descontado con IVA': montoTotalDescontadoConIva,
                     'Porcentaje de comisión': porcentajeComision,
                     'Comisión en Dólares': appState.paymentCurrency === 'USD' ? comisionFinal : 0,
                     'Comisión en Colones': appState.paymentCurrency === 'CRC' ? comisionFinal : 0,
+                    precioBaseUSD,
+                    precioBaseCRC
                 };
             }
             
@@ -1036,7 +1030,7 @@
                             appState.paymentCurrency = newCurrency;
                             formFields.currencySelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
                             button.classList.add('active');
-                            appState.manualPriceOverride = null; // Reset override on currency change
+                            appState.manualPriceOverride = null;
                             resumenFields.resetPriceBtn.classList.add('hidden');
                             calculateAll();
                         }
@@ -1067,7 +1061,8 @@
                     }
                 });
 
-                resumenFields.totalFinal.addEventListener('blur', () => {
+                resumenFields.totalFinal.addEventListener('blur', (e) => {
+                    appState.manualPriceOverride = parseNumber(e.target.value); // Ensure it's stored as a number
                     calculateAll();
                 });
 
@@ -1131,20 +1126,14 @@
                         'Tipo de Estudio': formFields.tipoEstudio.value,
                         'Medico que Refiere': formFields.medicoRefiere.value,
                         'Medico que Reporta': formFields.medicoReporta.value,
-                        'Moneda de Pago': appState.paymentCurrency === 'USD' ? 'Dólares' : 'Colones',
-                        'Monto Total': calculatedData.montoTotal,
-                        Descuento: parseNumber(formFields.descuento.value),
-                        'Descuento aplicado por': (parseNumber(formFields.descuento.value) > 0) ? appState.currentUser.Usuario : '',
-                        'Monto Total Descontado': calculatedData.montoTotalDescontado,
-                        'Método pago': formFields.metodoPago.value,
-                        IVA: calculatedData.IVA,
-                        Fee: calculatedData.Fee,
-                        'Monto total Descontado con IVA': calculatedData['Monto total Descontado con IVA'],
-                        'Porcentaje de comisión': calculatedData['Porcentaje de comisión'],
-                        'Comisión en Colones': calculatedData['Comisión en Colones'],
-                        'Comisión en Dólares': calculatedData['Comisión en Dólares'],
+                        ...calculatedData,
+                        'Descuento aplicado por': (calculatedData.Descuento > 0) ? appState.currentUser.Usuario : '',
                     };
                     
+                    // Remove temporary fields not in Sheets
+                    delete citaData.precioBaseUSD;
+                    delete citaData.precioBaseCRC;
+
                     const payload = { ...citaData, tipoEstudio: citaData.Especialidad };
                     const endpoint = appState.isEditing ? '/.netlify/functions/update-cita' : '/.netlify/functions/add-cita';
                     const method = appState.isEditing ? 'PUT' : 'POST';
@@ -1244,9 +1233,15 @@
                 formFields.fechaEstudio.value = cita['Fecha de Estudio'];
                 formFields.registra.textContent = cita['Descuento aplicado por'] || cita['Usuario que registra'] || 'N/A';
                 
-                const moneda = cita['Moneda de Pago'];
-                appState.paymentCurrency = (moneda === 'Colones' || moneda === 'CRC') ? 'CRC' : 'USD';
+                appState.paymentCurrency = (cita['Moneda de Pago'] === 'Colones') ? 'CRC' : 'USD';
                 formFields.currencySelector.querySelectorAll('button').forEach(btn => btn.classList.toggle('active', btn.dataset.currency === appState.paymentCurrency));
+                
+                appState.manualPriceOverride = parseNumber(cita['Monto Total']);
+                if (parseNumber(cita['Monto Total']) !== (appState.paymentCurrency === 'USD' ? parseNumber(cita.precioBaseUSD) : parseNumber(cita.precioBaseCRC))) {
+                    resumenFields.resetPriceBtn.classList.remove('hidden');
+                } else {
+                    resumenFields.resetPriceBtn.classList.add('hidden');
+                }
 
                 formFields.enviado.checked = cita.Enviado && cita.Enviado.toLowerCase() === 'si';
                 formFields.descuento.value = cita.Descuento || "";
@@ -1263,19 +1258,19 @@
                     formFields.medicoReporta.value = cita['Medico que Reporta'];
                     formFields.metodoPago.value = cita['Método pago'];
                     calculateAll();
-                }, 0);
+                }, 50); // Small delay to ensure dropdowns are populated
             }
 
-            function updateFinalTotalDisplay(recalculate = true) {
+            function updateFinalTotalDisplay(calculatedData) {
                 const totalInput = resumenFields.totalFinal;
-                const { 'Monto total Descontado con IVA': total } = getCalculatedData();
-
+                const totalValue = calculatedData['Monto total Descontado con IVA'];
+                
                 if (appState.paymentCurrency === 'USD') {
                     totalInput.style.color = 'var(--color-primary)';
-                    totalInput.value = formatUSD(recalculate ? total : parseNumber(totalInput.value));
+                    totalInput.value = formatUSD(totalValue);
                 } else { // CRC
                     totalInput.style.color = 'var(--color-secondary)';
-                    totalInput.value = formatCRC(recalculate ? total : parseNumber(totalInput.value));
+                    totalInput.value = formatCRC(totalValue);
                 }
             }
 
@@ -1332,6 +1327,7 @@
     </script>
 </body>
 </html>
+
 
 
 
