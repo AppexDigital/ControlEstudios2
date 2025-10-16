@@ -919,7 +919,6 @@
                 // --- 2. Get Base Prices & Parameters ---
                 const precioBaseUSD = selectedService ? parseNumber(selectedService['Precio Dolares']) : 0;
                 const precioBaseCRC = selectedService ? parseNumber(selectedService['Precio Colones']) : 0;
-                const tipoCambio = (precioBaseUSD > 0 && precioBaseCRC > 0) ? (precioBaseCRC / precioBaseUSD) : 520;
 
                 const descuento = parseNumber(formFields.descuento.value);
                 const ivaPercent = selectedMetodoPago ? parsePercent(selectedMetodoPago.IVA) : 0;
@@ -982,6 +981,8 @@
                     }
                 }
                 const comisionFinal = Math.round(comision * 100) / 100;
+                
+                const tipoCambio = (precioBaseUSD > 0 && precioBaseCRC > 0) ? (precioBaseCRC / precioBaseUSD) : 520;
 
                 return {
                     montoTotal: effectiveBase,
@@ -991,6 +992,7 @@
                     IVA: iva,
                     Fee: fee,
                     'Monto total Descontado con IVA': montoTotalDescontadoConIVA,
+                    'Porcentaje de comisión': porcentajeComision,
                     'Comisión en Dólares': appState.paymentCurrency === 'USD' ? comisionFinal : 0,
                     'Comisión en Colones': appState.paymentCurrency === 'CRC' ? comisionFinal : 0,
                 };
@@ -1138,7 +1140,7 @@
                         IVA: calculatedData.IVA,
                         Fee: calculatedData.Fee,
                         'Monto total Descontado con IVA': calculatedData['Monto total Descontado con IVA'],
-                        'Porcentaje de comisión': selectedMedicoReporta ? parsePercent(selectedMedicoReporta.Comisión) : 0,
+                        'Porcentaje de comisión': calculatedData['Porcentaje de comisión'],
                         'Comisión en Colones': calculatedData['Comisión en Colones'],
                         'Comisión en Dólares': calculatedData['Comisión en Dólares'],
                     };
@@ -1330,7 +1332,6 @@
     </script>
 </body>
 </html>
-
 
 
 
