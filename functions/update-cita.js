@@ -44,7 +44,7 @@ exports.handler = async function(event, context) {
                     rowToUpdate.set(key, updatedCita[key]);
                 }
             });
-            await rowToUpdate.save({ raw: true }); // Save changes to the sheet.
+            await rowToUpdate.save(); // Save changes to the sheet.
             return { statusCode: 200, body: JSON.stringify({ message: 'Cita actualizada con éxito!' }) };
         } else {
             return { statusCode: 404, body: JSON.stringify({ error: 'No se encontró la cita para actualizar.' }) };
