@@ -1,13 +1,17 @@
 {
   "name": "controlexamenes",
   "version": "1.0.0",
-  "description": "",
+  "description": "Aplicación para la gestión de exámenes médicos.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "netlify",
+    "serverless",
+    "google-sheets"
+  ],
+  "author": "Appex Arquitecto Digital",
   "license": "ISC",
   "dependencies": {
     "google-auth-library": "^9.0.0",
